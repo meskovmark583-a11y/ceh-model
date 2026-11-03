@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Схема цеха</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap" rel="stylesheet">
+<style>
+/* Идея: технологическая схема на листе. Блоки как колонки таблицы, стрелки показывают, куда уходит заказ при каждом значении. Цвет блока = кто его ведёт. */
+:root{
+  --bg:#eef0ee; --panel:#ffffff; --ink:#16201d; --mut:#5a6a65; --line:#d2d9d5; --grid:#dfe4e1;
+  --ok:#2f8a55; --warn:#c07a12; --bad:#c4382b; --acc:#1d5f8a; --acc-ink:#fff;
+  --w-1c:#7d858c; --w-mgr:#d9822b; --w-lab:#c9a50f; --w-pack:#3d83c9; --w-load:#3d9a5b; --w-dir:#7a5bb5;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-head:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12181a; --panel:#1b2427; --ink:#e7eeeb; --mut:#9bacaa; --line:#2f3d40; --grid:#222d30;
+  --ok:#55c486; --warn:#e8a64a; --bad:#ff8a7c; --acc:#6bb4e6; --acc-ink:#07202f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12181a; --panel:#1b2427; --ink:#e7eeeb; --mut:#9bacaa; --line:#2f3d40; --grid:#222d30;
+  --ok:#55c486; --warn:#e8a64a; --bad:#ff8a7c; --acc:#6bb4e6; --acc-ink:#07202f; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.35;display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit;color:inherit}
+header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-family:var(--font-head);font-size:20px;margin:0;letter-spacing:.01em}
+header .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:8px 12px;cursor:pointer;min-height:38px}
+.btn:hover{border-color:var(--acc)}
+.btn[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.pri{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.btn.dng{color:var(--bad);border-color:var(--bad)}
+.btn:focus-visible,.val:focus-visible,.nh:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#status{font-size:13px;color:var(--mut)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;padding:8px 16px;font-size:13px;color:var(--mut);border-bottom:1px solid var(--line)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.hint{padding:8px 16px;font-size:13px;color:var(--mut)}
+#wrap{flex:1;min-height:0;overflow:auto;background-color:var(--bg);background-image:radial-gradient(var(--grid) 1px,transparent 1px);background-size:22px 22px;position:relative}
+#stage{position:relative}
+#edges{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.node{position:absolute;width:250px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow:hidden}
+.node.sel{outline:2px solid var(--acc)}
+.nh{padding:8px 12px;cursor:grab;touch-action:none;border-top:5px solid var(--wc,var(--w-1c));user-select:none;display:block;width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0}
+.nh .role{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+.nh b{display:block;font-family:var(--font-head);font-size:16px;font-weight:600}
+.note{padding:0 12px 6px;font-size:12.5px;color:var(--mut)}
+.vals{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.val{display:flex;align-items:center;gap:8px;justify-content:space-between;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:8px 12px;cursor:pointer;min-height:38px}
+.val:last-child{border-bottom:0}
+.val:hover,.val.sel{background:color-mix(in srgb,var(--acc) 12%,transparent)}
+.val .vt{flex:1;min-width:0}
+.val .dot{flex:none;width:12px;height:12px;border-radius:50%;background:var(--tc,var(--mut));border:2px solid var(--panel);box-shadow:0 0 0 1px var(--tc,var(--mut));margin-right:-18px}
+.val.t-ok{--tc:var(--ok)}.val.t-warn{--tc:var(--warn)}.val.t-bad{--tc:var(--bad)}
+.val .none{font-size:11px;color:var(--mut);margin-right:10px}
+.who-1c{--wc:var(--w-1c)}.who-mgr{--wc:var(--w-mgr)}.who-lab{--wc:var(--w-lab)}.who-pack{--wc:var(--w-pack)}.who-load{--wc:var(--w-load)}.who-dir{--wc:var(--w-dir)}
+#panel{position:fixed;z-index:5;background:var(--panel);border:1px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.25);padding:14px 16px;display:none;flex-direction:column;gap:8px;overflow:auto}
+#panel.on{display:flex}
+@media (min-width:900px){#panel{right:16px;top:120px;width:320px;max-height:calc(100% - 140px);border-radius:14px}}
+@media (max-width:899px){#panel{left:0;right:0;bottom:0;max-height:62%;border-radius:16px 16px 0 0}}
+#panel h2{font-family:var(--font-head);font-size:17px;margin:0}
+#panel label{font-size:13px;color:var(--mut)}
+#panel input,#panel select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);min-height:40px}
+#panel .row{display:flex;gap:8px;flex-wrap:wrap}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:8;display:none;align-items:center;justify-content:center;padding:16px}
+.ov.on{display:flex}
+.dlg{background:var(--panel);border-radius:14px;padding:16px;max-width:640px;width:100%;max-height:86%;display:flex;flex-direction:column;gap:10px}
+.dlg textarea{width:100%;flex:1;min-height:260px;border:1px solid var(--line);border-radius:9px;padding:10px;background:var(--bg);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+@media (prefers-reduced-motion:no-preference){.node{transition:box-shadow .15s}.node:hover{box-shadow:0 4px 14px rgba(0,0,0,.14)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Схема цеха</h1>
+  <div role="tablist" aria-label="Вид схемы" style="display:flex;gap:6px">
+    <button class="btn" role="tab" id="tMain" type="button" aria-selected="true">Весь путь заказа</button>
+    <button class="btn" role="tab" id="tAdm" type="button" aria-selected="false">Допуск: что куда ведёт</button>
+  </div>
+  <button class="btn pri" id="addNode" type="button">+ Блок</button>
+  <button class="btn" id="asText" type="button">Показать текстом</button>
+  <button class="btn" id="reset" type="button">Вернуть как в таблице</button>
+  <span class="sp"></span>
+  <span id="status" role="status"></span>
+</header>
+<div class="legend" id="legend"></div>
+<div class="hint">Касание заголовка блока: правка блока. Касание значения: куда ведёт стрелка. Блоки можно двигать за заголовок. Слайд в стороны: листать схему.</div>
+<div id="wrap"><div id="stage"><svg id="edges" aria-hidden="true"></svg></div></div>
+<div id="panel" role="dialog" aria-label="Правка"></div>
+<div class="ov" id="ov"><div class="dlg"><h2 style="margin:0;font-family:var(--font-head)" id="ovT">Схема текстом</h2><textarea id="ovTa" readonly aria-label="Текст схемы"></textarea><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="ovSel" type="button">Выделить всё</button><button class="btn pri" id="ovClose" type="button">Закрыть</button></div></div></div>
+
+<script>
+"use strict";
+const WHO = [["1С", "who-1c"], ["Менеджер", "who-mgr"], ["Расклейщица", "who-lab"], ["Фасовщик", "who-pack"], ["Грузчик", "who-load"], ["Директор", "who-dir"]];
+const whoCls = w => (WHO.find(x => x[0] === w) || WHO[0])[1];
+const TONES = [["", "Обычное"], ["ok", "Хорошо"], ["warn", "Внимание"], ["bad", "Проблема"]];
+const NW = 250;
+
+function seed() {
+  const V = (id, text, to, tone) => ({ id, text, to: to || null, tone: tone || "" });
+  return {
+    nodes: [
+      { id: "in", x: 30, y: 200, title: "Заказ из 1С", who: "1С", note: "Заказ покупателя с бумажного листа", values: [V("v1", "Заказ загружен", "mgr")] },
+      { id: "mgr", x: 320, y: 40, title: "Проверка заказа", who: "Менеджер", note: "Колонка B «Для менеджера: ОК / Перенос»", values: [V("v2", "ОК", "adm", "ok"), V("v3", "Перенос", "date", "warn")] },
+      { id: "date", x: 610, y: 330, title: "Новая дата отгрузки", who: "Менеджер", note: "Выбор даты в календаре; в таблице красный ПЕРЕНОС и жёлтая дата", values: [V("v4", "Дата выбрана", "adm", "ok")] },
+      { id: "adm", x: 900, y: 40, title: "Допуск", who: "Менеджер", note: "Колонка A «Задача». Один выключатель: есть допуск или нет. Что значит каждый вариант, смотри вкладку «Допуск»", values: [V("v5", "Допуск есть (Грузим и его варианты)", "lab", "ok"), V("v8", "Нет допуска (Не грузим)", "wait", "bad")] },
+      { id: "wait", x: 1190, y: 330, title: "Остановка: нет допуска", who: "Менеджер", note: "Ответвление от колонки A. Цех такой заказ не собирает (обычно не оплачен), пока менеджер не даст допуск", values: [V("v9", "Допуск дали", "lab", "ok")] },
+      { id: "lab", x: 1190, y: 40, title: "Расклейка", who: "Расклейщица", note: "Колонка I «Статус расклейки». Мешки в крафте не клеим", values: [V("v10", "Не готово"), V("v11", "Готово, пачек расклеено", "pack", "ok"), V("v12", "Нет наклеек", "prob", "bad"), V("v27", "Частично", "prob", "warn")] },
+      { id: "prob", x: 1480, y: 330, title: "Проблема у менеджера", who: "Менеджер", note: "Заказ у цеха пропадает, пока менеджер и директор не решат", values: [V("v13", "Решили: вернуть в работу", "pack", "ok"), V("v14", "Перенос на другую дату", "date", "warn")] },
+      { id: "pack", x: 1480, y: 40, title: "Сборка", who: "Фасовщик", note: "Колонка J «Статус сборки». Считаем в штуках, пишем коробки", values: [V("v15", "Не готово"), V("v16", "Готово, коробок N", "ship", "ok"), V("v17", "Частично, не хватило", "part", "warn"), V("v18", "Замена документов", "prob", "warn"), V("v19", "Нет зерна", "grain", "warn")] },
+      { id: "grain", x: 1770, y: 330, title: "Ждём зерно", who: "Директор", note: "Не проблема. Заказ остаётся у фасовщика, директор и менеджер видят пометку", values: [V("v20", "Зерно появилось", "pack", "ok")] },
+      { id: "part", x: 2060, y: 330, title: "Недовоз", who: "Менеджер", note: "Решает менеджер вместе с клиентом", values: [V("v21", "Отгрузить что собрано", "ship", "ok"), V("v22", "Остаток в новый заказ «-Н»", "in", "warn")] },
+      { id: "ship", x: 1770, y: 40, title: "Отгрузка", who: "Грузчик", note: "Колонка K «Статус доставки». Видит число коробок", values: [V("v23", "Выполнена", "done", "ok"), V("v24", "Не выполнена", "prob", "bad")] },
+      { id: "data", x: 30, y: 420, title: "Что есть в строке заказа", who: "1С", note: "Колонки C–H и L–O. Только справка, стрелок нет", info: true, values: [V("d1", "Дата создания"), V("d2", "Дата отгрузки"), V("d3", "Номер заказа (НФНЛ / 00УФ)"), V("d4", "Состав: 13 бр, 12 4гр…"), V("d5", "Заказ: клиент с пометками (э), ек"), V("d6", "ЧЗ: V с Честным знаком, O без"), V("d7", "Коробок и пачек"), V("d8", "База: Луна / Троица"), V("d9", "Способ доставки и адрес")] },
+      { id: "eve", x: 1770, y: 700, title: "Остатки на вечер", who: "Фасовщик", note: "Низ таблицы: сорта и сколько осталось. Мешки × 20 кг, приблизительно", values: [V("e1", "Остаток записан", "sum", "ok")] },
+      { id: "sum", x: 2060, y: 700, title: "Сводка директора", who: "Директор", note: "Видит остатки зерна, проблемы, «Ждём зерно»", values: [] },
+      { id: "a_adm", g: "adm", x: 30, y: 330, title: "Допуск", who: "Менеджер", note: "Колонка A «Задача». Менеджер меняет допуск в любой момент", values: [V("a1", "Грузим", "a_go", "ok"), V("a2", "Грузим без оплаты", "a_nopay", "ok"), V("a3", "Сборка без отгрузки", "a_noship", "warn"), V("a4", "Не грузим", "a_stop", "bad")] },
+      { id: "a_go", g: "adm", x: 380, y: 30, title: "Грузим", who: "Менеджер", note: "Всё разрешено, оплата есть", values: [V("a5", "Расклейщица клеит", "a_lab", "ok"), V("a6", "Фасовщик собирает", "a_pack", "ok"), V("a7", "Грузчик отгружает", "a_ship", "ok")] },
+      { id: "a_nopay", g: "adm", x: 380, y: 270, title: "Грузим без оплаты", who: "Менеджер", note: "Как «Грузим», но оплаты ещё нет. Менеджер и директор видят пометку", values: [V("a8", "Расклейщица клеит", "a_lab", "ok"), V("a9", "Фасовщик собирает", "a_pack", "ok"), V("a10", "Грузчик отгружает", "a_ship", "ok")] },
+      { id: "a_noship", g: "adm", x: 380, y: 510, title: "Сборка без отгрузки", who: "Менеджер", note: "Собираем заранее, но грузчику не отдаём", values: [V("a11", "Расклейщица клеит", "a_lab", "ok"), V("a12", "Фасовщик собирает", "a_pack", "ok"), V("a13", "Грузчик не отгружает", null, "bad")] },
+      { id: "a_stop", g: "adm", x: 380, y: 750, title: "Не грузим", who: "Менеджер", note: "Обычно не оплачен. Цех не собирает, даже если зерно есть", values: [V("a14", "Расклейщица: клеит или нет? (вопрос В9)", "a_lab", "warn"), V("a15", "Фасовщик не собирает", null, "bad"), V("a16", "Грузчик не отгружает", null, "bad")] },
+      { id: "a_lab", g: "adm", x: 770, y: 120, title: "Расклейка", who: "Расклейщица", note: "Заказ появляется у расклейщицы", values: [] },
+      { id: "a_pack", g: "adm", x: 770, y: 420, title: "Сборка", who: "Фасовщик", note: "Заказ появляется у фасовщика", values: [] },
+      { id: "a_ship", g: "adm", x: 770, y: 700, title: "Отгрузка", who: "Грузчик", note: "Заказ появляется у грузчика", values: [] },
+      { id: "done", x: 2060, y: 40, title: "Готово", who: "Директор", note: "Заказ закрыт, виден в сводке директора", values: [] }
+    ]
+  };
+}
+
+const SEED_VER = 4;
+let view = "main";
+let S = seed(), sel = null, mode = "pending", doc = null, saveT = null;
+const $ = id => document.getElementById(id);
+const stage = $("stage"), edges = $("edges"), panel = $("panel");
+const byId = id => S.nodes.find(n => n.id === id);
+const inView = n => (n.g || "main") === view;
+const uid = p => p + Math.random().toString(36).slice(2, 8);
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "class") e.className = v;
+    else if (k === "value") e.value = v;
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  kids.flat().forEach(c => { if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(c)); });
+  return e;
+}
+
+/* ---------- сохранение */
+function migrate(saved) {
+  const base = seed().nodes;
+  if ((saved.ver || 1) >= SEED_VER) return saved.nodes;
+  if ((saved.ver || 1) < 4) { const a = saved.nodes.find(x => x.id === "adm"), b = base.find(x => x.id === "adm"); if (a && b) { a.values = b.values; a.note = b.note; } const w = saved.nodes.find(x => x.id === "wait"), bw = base.find(x => x.id === "wait"); if (w && bw) { w.title = bw.title; w.note = bw.note; } }
+  base.forEach(b => { const n = saved.nodes.find(x => x.id === b.id); if (!n) saved.nodes.push(b); else b.values.forEach(v => { if (!n.values.some(x => x.id === v.id)) n.values.push(v); if (b.info) n.info = true; }); });
+  return saved.nodes;
+}
+function status(t) { $("status").textContent = t; }
+function queueSave() { status("Сохраняю…"); clearTimeout(saveT); saveT = setTimeout(save, 600); }
+async function save() {
+  const data = { ver: SEED_VER, nodes: S.nodes, savedAt: new Date().toISOString() };
+  try {
+    if (mode === "db" && doc) await doc.set(data); else localStorage.setItem("tcs-schema", JSON.stringify(data));
+    status((mode === "db" ? "Сохранено" : "Сохранено в этом браузере") + " в " + new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }));
+  } catch (e) { status("Не удалось сохранить. Нажмите «Показать текстом» и скопируйте схему."); }
+}
+async function initStore() {
+  try {
+    if (!window.claude || !window.claude.use) throw new Error("no runtime");
+    const db = await Promise.race([window.claude.use("db"), new Promise(r => setTimeout(() => r(null), 10000))]);
+    if (!db) throw new Error("no db");
+    doc = db.doc("schema/main"); mode = "db";
+    const snap = await doc.get();
+    if (snap.exists && snap.data().nodes) S = { nodes: migrate(snap.data()) };
+    status("Схема загружена");
+  } catch (e) {
+    mode = "local";
+    try { const raw = localStorage.getItem("tcs-schema"); if (raw) { const d = JSON.parse(raw); if (d.nodes) S = { nodes: migrate(d) }; } } catch (e2) { /* без хранилища работаем в памяти */ }
+  }
+  render();
+}
+
+/* ---------- отрисовка */
+function render() {
+  [...stage.querySelectorAll(".node")].forEach(n => n.remove());
+  S.nodes.filter(inView).forEach(n => {
+    const isSelNode = sel && sel.type === "node" && sel.id === n.id;
+    const box = el("div", { class: "node " + whoCls(n.who) + (isSelNode ? " sel" : ""), "data-id": n.id, style: "left:" + n.x + "px;top:" + n.y + "px" });
+    const head = el("button", { class: "nh", type: "button", "aria-label": "Блок: " + n.title }, el("span", { class: "role" }, n.who || "Без роли"), el("b", {}, n.title));
+    attachDrag(head, n);
+    box.append(head);
+    if (n.note) box.append(el("div", { class: "note" }, n.note));
+    if (n.values.length) box.append(el("div", { class: "vals" }, n.values.map(v => {
+      const isSel = sel && sel.type === "val" && sel.vid === v.id;
+      return el("button", { class: "val" + (v.tone ? " t-" + v.tone : "") + (isSel ? " sel" : ""), type: "button", "data-vid": v.id, onclick: () => { sel = { type: "val", id: n.id, vid: v.id }; render(); } },
+        el("span", { class: "vt" }, v.text), (v.to || n.info) ? null : el("span", { class: "none" }, "никуда"), n.info ? null : el("i", { class: "dot" }));
+    })));
+    stage.append(box);
+  });
+  sizeStage(); drawEdges(); drawPanel();
+}
+function sizeStage() {
+  let w = 0, h = 0;
+  stage.querySelectorAll(".node").forEach(n => { w = Math.max(w, n.offsetLeft + n.offsetWidth); h = Math.max(h, n.offsetTop + n.offsetHeight); });
+  stage.style.width = (w + 80) + "px"; stage.style.height = (h + 80) + "px";
+  edges.setAttribute("width", w + 80); edges.setAttribute("height", h + 80);
+}
+function toneVar(t) { return t === "ok" ? "var(--ok)" : t === "warn" ? "var(--warn)" : t === "bad" ? "var(--bad)" : "var(--mut)"; }
+function drawEdges() {
+  const sr = stage.getBoundingClientRect();
+  let defs = '<defs>' + ["", "ok", "warn", "bad"].map(t => '<marker id="ar' + t + '" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:' + toneVar(t) + '"/></marker>').join("") + '</defs>';
+  let paths = "";
+  S.nodes.filter(inView).forEach(n => n.values.forEach(v => {
+    if (!v.to) return;
+    const dot = stage.querySelector('[data-vid="' + v.id + '"] .dot'), tgt = stage.querySelector('.node[data-id="' + v.to + '"] .nh');
+    if (!dot || !tgt) return;
+    const a = dot.getBoundingClientRect(), b = tgt.getBoundingClientRect();
+    const x1 = a.left + a.width / 2 - sr.left, y1 = a.top + a.height / 2 - sr.top, x2 = b.left - sr.left - 2, y2 = b.top + b.height / 2 - sr.top;
+    const back = x2 < x1 + 20, dx = back ? 110 : Math.max(60, (x2 - x1) / 2);
+    const d = "M" + x1 + "," + y1 + " C" + (x1 + dx) + "," + y1 + " " + (x2 - dx) + "," + y2 + " " + x2 + "," + y2;
+    const hl = sel && sel.type === "val" && sel.vid === v.id;
+    paths += '<path d="' + d + '" fill="none" stroke-width="' + (hl ? 3.5 : 2) + '" style="stroke:' + toneVar(v.tone) + '" opacity="' + (sel && sel.type === "val" && !hl ? .55 : 1) + '" marker-end="url(#ar' + v.tone + ')"/>';
+  }));
+  edges.innerHTML = defs + paths;
+}
+
+/* ---------- перетаскивание */
+function attachDrag(head, n) {
+  let sx, sy, ox, oy, moved = false, box;
+  head.addEventListener("pointerdown", e => {
+    if (e.button && e.button !== 0) return;
+    head.setPointerCapture(e.pointerId); sx = e.clientX; sy = e.clientY; ox = n.x; oy = n.y; moved = false; box = head.closest(".node");
+  });
+  head.addEventListener("pointermove", e => {
+    if (!head.hasPointerCapture(e.pointerId)) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (!moved && Math.abs(dx) + Math.abs(dy) < 5) return;
+    moved = true; n.x = Math.max(0, Math.round(ox + dx)); n.y = Math.max(0, Math.round(oy + dy));
+    box.style.left = n.x + "px"; box.style.top = n.y + "px"; drawEdges();
+  });
+  head.addEventListener("pointerup", e => {
+    if (head.hasPointerCapture(e.pointerId)) head.releasePointerCapture(e.pointerId);
+    if (moved) { sizeStage(); queueSave(); } else { sel = { type: "node", id: n.id }; render(); }
+  });
+}
+
+/* ---------- панель правки */
+function drawPanel() {
+  panel.replaceChildren(); panel.classList.toggle("on", !!sel);
+  if (!sel) return;
+  const n = byId(sel.id); if (!n) { sel = null; panel.classList.remove("on"); return; }
+  const close = el("button", { class: "btn", type: "button", onclick: () => { sel = null; render(); } }, "Закрыть");
+  if (sel.type === "node") {
+    const t = el("input", { id: "pt", value: n.title }), who = el("select", { id: "pw" }, WHO.map(w => el("option", { value: w[0] }, w[0]))), note = el("input", { id: "pn", value: n.note || "" });
+    who.value = n.who;
+    t.addEventListener("input", () => { n.title = t.value; queueSave(); }); t.addEventListener("change", render);
+    who.addEventListener("change", () => { n.who = who.value; queueSave(); render(); });
+    note.addEventListener("input", () => { n.note = note.value; queueSave(); }); note.addEventListener("change", render);
+    let confirmDel = false;
+    const del = el("button", { class: "btn dng", type: "button", onclick: () => {
+      if (!confirmDel) { confirmDel = true; del.textContent = "Точно удалить блок?"; return; }
+      S.nodes = S.nodes.filter(x => x.id !== n.id); S.nodes.forEach(x => x.values.forEach(v => { if (v.to === n.id) v.to = null; })); sel = null; queueSave(); render();
+    } }, "Удалить блок");
+    panel.append(el("h2", {}, "Блок"), el("label", { for: "pt" }, "Название"), t, el("label", { for: "pw" }, "Кто ведёт"), who, el("label", { for: "pn" }, "Пояснение"), note,
+      el("div", { class: "row" }, el("button", { class: "btn pri", type: "button", onclick: () => { const v = { id: uid("v"), text: "Новое значение", to: null, tone: "" }; n.values.push(v); sel = { type: "val", id: n.id, vid: v.id }; queueSave(); render(); } }, "+ Значение"), del, close));
+  } else {
+    const v = n.values.find(x => x.id === sel.vid); if (!v) { sel = null; render(); return; }
+    const t = el("input", { id: "pt", value: v.text });
+    const to = el("select", { id: "pto" }, el("option", { value: "" }, "Никуда (заказ остаётся)"), S.nodes.filter(x => x.id !== n.id && inView(x)).map(x => el("option", { value: x.id }, x.title + " (" + x.who + ")")));
+    to.value = v.to || "";
+    const tone = el("select", { id: "ptn" }, TONES.map(x => el("option", { value: x[0] }, x[1]))); tone.value = v.tone || "";
+    t.addEventListener("input", () => { v.text = t.value; queueSave(); }); t.addEventListener("change", render);
+    to.addEventListener("change", () => { v.to = to.value || null; queueSave(); render(); });
+    tone.addEventListener("change", () => { v.tone = tone.value; queueSave(); render(); });
+    let confirmDel = false;
+    const del = el("button", { class: "btn dng", type: "button", onclick: () => {
+      if (!confirmDel) { confirmDel = true; del.textContent = "Точно удалить?"; return; }
+      n.values = n.values.filter(x => x.id !== v.id); sel = { type: "node", id: n.id }; queueSave(); render();
+    } }, "Удалить значение");
+    const move = d => el("button", { class: "btn", type: "button", "aria-label": d < 0 ? "Выше" : "Ниже", onclick: () => { const i = n.values.indexOf(v), j = i + d; if (j < 0 || j >= n.values.length) return; n.values.splice(i, 1); n.values.splice(j, 0, v); queueSave(); render(); } }, d < 0 ? "Выше" : "Ниже");
+    panel.append(el("h2", {}, "Значение в блоке «" + n.title + "»"), el("label", { for: "pt" }, "Что выбрано в таблице"), t, el("label", { for: "pto" }, "Куда уходит заказ"), to, el("label", { for: "ptn" }, "Цвет стрелки"), tone,
+      el("div", { class: "row" }, move(-1), move(1), del, close));
+  }
+}
+
+/* ---------- кнопки сверху */
+function setView(v) { view = v; sel = null; $("tMain").setAttribute("aria-selected", String(v === "main")); $("tAdm").setAttribute("aria-selected", String(v === "adm")); $("wrap").scrollTo(0, 0); render(); }
+$("tMain").addEventListener("click", () => setView("main")); $("tAdm").addEventListener("click", () => setView("adm"));
+$("addNode").addEventListener("click", () => {
+  const w = $("wrap"), n = { id: uid("n"), g: view, x: Math.round(w.scrollLeft + 40), y: Math.round(w.scrollTop + 40), title: "Новый блок", who: "Менеджер", note: "", values: [{ id: uid("v"), text: "Готово", to: null, tone: "ok" }] };
+  S.nodes.push(n); sel = { type: "node", id: n.id }; queueSave(); render();
+});
+function schemaText() {
+  return [["main", "ВЕСЬ ПУТЬ ЗАКАЗА"], ["adm", "ДОПУСК: ЧТО КУДА ВЕДЁТ"]].map(([g, t]) => "=== " + t + " ===\n\n" + S.nodes.filter(n => (n.g || "main") === g).sort((a, b) => a.x - b.x || a.y - b.y).map(n => {
+    const head = "[" + n.who + "] " + n.title + (n.note ? " (" + n.note + ")" : "");
+    const rows = n.values.map(v => "   • " + v.text + " → " + (v.to ? byId(v.to).title : "заказ остаётся здесь") + (v.tone === "bad" ? "  [проблема]" : v.tone === "warn" ? "  [внимание]" : ""));
+    return [head, ...rows].join("\n");
+  }).join("\n\n")).join("\n\n\n");
+}
+$("asText").addEventListener("click", () => { $("ovT").textContent = "Схема текстом"; $("ovTa").value = schemaText(); $("ov").classList.add("on"); });
+$("ovClose").addEventListener("click", () => $("ov").classList.remove("on"));
+$("ovSel").addEventListener("click", () => { $("ovTa").focus(); $("ovTa").select(); });
+let resetArmed = false;
+$("reset").addEventListener("click", e => {
+  if (!resetArmed) { resetArmed = true; e.target.textContent = "Точно сбросить? Нажмите ещё раз"; setTimeout(() => { resetArmed = false; e.target.textContent = "Вернуть как в таблице"; }, 4000); return; }
+  resetArmed = false; e.target.textContent = "Вернуть как в таблице"; S = seed(); sel = null; queueSave(); render();
+});
+$("legend").append(...WHO.map(w => { const s = el("span", {}, el("i", { class: whoCls(w[0]), style: "background:var(--wc)" }), w[0]); return s; }),
+  el("span", {}, el("i", { style: "background:var(--ok)" }), "стрелка: хорошо"), el("span", {}, el("i", { style: "background:var(--warn)" }), "внимание"), el("span", {}, el("i", { style: "background:var(--bad)" }), "проблема"));
+window.addEventListener("resize", drawEdges);
+$("wrap").addEventListener("scroll", () => {}, { passive: true });
+render(); initStore();
+</script>
+</body>
+</html>
