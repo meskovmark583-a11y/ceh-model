@@ -92,6 +92,7 @@ textarea.note{width:100%;min-height:70px;border:1px solid var(--line);border-rad
 .sheet label{font-size:13px;color:#5c6b66}
 .sheet input,.sheet textarea,.sheet select{width:100%;border:1px solid #c9cfca;border-radius:8px;padding:9px 10px;min-height:var(--btn-h);background:#fff}
 .sheet textarea{min-height:70px}
+.sheet>.acts{position:sticky;bottom:-16px;background:inherit;margin-top:6px;padding:10px 0 16px;box-shadow:0 -10px 10px -10px rgba(0,0,0,.25)}
 .opt{display:flex;gap:10px;align-items:center;border:1px solid #c9cfca;border-radius:10px;min-height:var(--btn-h);padding:6px 10px;cursor:pointer}
 .opt.on{border-color:#2b8a63;background:#eaf6ef}
 .toast{position:absolute;left:12px;right:12px;bottom:70px;background:#15201d;color:#fff;border-radius:10px;padding:10px 14px;z-index:4;font-size:14px}
@@ -443,7 +444,7 @@ function editSheet(o) {
   sheet("Изменить заказ № " + o.doc, [h("div", { class: "mut" }, "Исправьте то, что неверно перенеслось из 1С. Цех увидит уже исправленный заказ."), dl,
     h("label", {}, "Клиент"), cust, h("label", {}, "Дата отгрузки"), ship, h("label", {}, "База"), base,
     h("label", {}, "Способ доставки"), deliv, addr, h("label", { class: "row" }, cz, " Честный знак"),
-    h("label", {}, "Позиции: товар и количество"), box, h("label", {}, "Состав (ориентир для обжарки)"), sostav, h("label", {}, "Требования клиента"), reqs],
+    h("label", {}, "Позиции: товар и количество"), box, h("label", {}, "Состав (как в таблице)"), sostav, h("label", {}, "Требования клиента"), reqs],
     close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => {
       const lines = draft.filter(l => l[0] && l[1] > 0);
       if (!cust.value.trim() || !lines.length) { say("Нужны клиент и хотя бы одна позиция"); return; }
@@ -491,7 +492,7 @@ function shipSheet(o) {
   draw();
   sheet("№ " + o.doc + " · Отгрузка", [wrap, h("label", {}, "Паллет / комментарий"), reason],
     close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => {
-      if (mode2 === "no") { o.hold = true; o.problem = { reason: "Не уехал", text: reason.value || "причина не указана", from: "ship", by: roleName(ST.role) }; close(); say("Менеджеру отправлена проблема"); return; }
+      if (mode2 === "no") { o.hold = true; o.problem = { reason: "Не уехал", text: reason.value || "причина не указана", from: "ship", by: roleName(ST.role) }; close(); say("Заказ ушёл менеджеру и директору"); return; }
       if (mode2 === "part") {
         const rest = o.lines.map((l, i) => [l[0], Math.max(0, l[1] - Math.min(l[1], +inputs[i].value || 0)), l[2]]).filter(l => l[1] > 0);
         if (rest.length) {
@@ -509,7 +510,7 @@ function shiftSheet() {
   sheet("Завершить смену", [h("div", { class: "mut" }, "Сколько осталось зерна на вечер. Считаем мешки: в одном примерно 20 кг, цифра приблизительная."), ...GRAINS.flatMap((g, i) => [h("label", {}, g + ", мешков"), ins[i]]), total],
     close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => { ST.grain.unshift({ day: TODAY, who: roleName(ST.role), rows: GRAINS.map((g, i) => [g, +ins[i].value || 0]) }); close(); say("Смена завершена, остаток зерна записан"); } }, "Завершить смену")]);
 }
-const REASONS_BY = { label: ["Нет наклеек", "Не хватает позиции"], pack: ["Нет зерна", "Не хватает пакетов", "Не хватает позиции", "Замена документов"], ship: ["Не хватает позиции", "Другое"] };
+const REASONS_BY = { label: ["Нет наклеек", "Не хватает позиции"], pack: ["Не хватило зерна", "Не хватило пакетов", "Не хватает позиции", "Замена документов"], ship: ["Не хватает позиции", "Другое"] };
 function askSheet(o, preset) {
   const R0 = REASONS_BY[o.stage] || REASONS_BY.pack; const reasons = preset && preset.reason && !R0.includes(preset.reason) ? [preset.reason, ...R0] : R0;
   const reason = h("select", {}, reasons.map(t => h("option", { selected: preset && preset.reason === t }, t)));
@@ -520,7 +521,7 @@ function askSheet(o, preset) {
   let photo = null; const prev = h("div", { class: "mut" }, "Фото не прикреплено");
   const file = h("input", { type: "file", accept: "image/*", onchange: e => { const f = e.target.files[0]; if (f) { photo = URL.createObjectURL(f); prev.replaceChildren(h("img", { src: photo, alt: "Фото заказа", style: "max-width:100%;max-height:120px;border-radius:10px" })); } } });
   sheet("Проблема по заказу № " + o.doc, [h("div", { class: "mut" }, "Заказ уйдёт менеджеру и директору, а у вас пропадёт из списка, пока они не решат. Это заменяет сообщение в общий чат."), h("label", {}, "Причина"), reason, h("label", {}, "По каким позициям (можно несколько)"), lineBox, h("div", { class: "mut" }, "Ничего не отмечено: проблема по всему заказу."), h("label", {}, "Комментарий"), text, h("label", {}, "Фото заказа (необязательно)"), file, prev],
-    close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => { if (reason.value === "Нет зерна") { o.grainWait = { by: roleName(ST.role), text: text.value, lines: [...sel].sort((a, b) => a - b), photo, date: TODAY }; ST.open = null; close(); say("Отмечено: ждём зерно. Заказ остаётся у вас, директор и менеджер видят пометку"); return; } o.hold = true; o.taker = null; o.resolution = null; o.problem = { reason: reason.value, lines: [...sel].sort((a, b) => a - b), text: text.value, photo, missing: preset && preset.missing, from: o.stage, by: roleName(ST.role) }; close(); say("Заказ ушёл менеджеру и директору"); } }, "Отправить менеджеру")]);
+    close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => { if (reason.value === "Не хватило зерна") { o.grainWait = { by: roleName(ST.role), text: text.value, lines: [...sel].sort((a, b) => a - b), photo, date: TODAY }; ST.open = null; close(); say("Отмечено: ждём зерно. Заказ остаётся у вас, директор и менеджер видят пометку"); return; } o.hold = true; o.taker = null; o.resolution = null; o.problem = { reason: reason.value, lines: [...sel].sort((a, b) => a - b), text: text.value, photo, missing: preset && preset.missing, from: o.stage, by: roleName(ST.role) }; close(); say("Заказ ушёл менеджеру и директору"); } }, "Отправить менеджеру")]);
 }
 
 /* ============================================================ экраны */
@@ -652,7 +653,7 @@ const VIEWS = {
   },
   prob(body) {
     const list = ST.orders.filter(o => o.stage !== "done" && o.stage !== "new" && problemsOf(o).length);
-    body.append(h("div", { class: "ph2" }, "Проблемные заказы"), h("div", { class: "mut" }, "То, что раньше уходило в чат с менеджерами: не хватает позиции или пакетов, недовоз, замена документов, неоплата, неоплата."));
+    body.append(h("div", { class: "ph2" }, "Проблемные заказы"), h("div", { class: "mut" }, "То, что раньше уходило в чат с менеджерами: не хватает позиции или пакетов, недовоз, замена документов, неоплата, не уехал."));
     { const gw = ST.orders.filter(o => o.grainWait && o.stage !== "done"); if (gw.length) { body.append(h("div", { class: "blk label" }, h("span", {}, "Ждут зерно"), h("i", {}, gw.length)), h("div", { class: "mut" }, "Это не проблема, решать ничего не нужно: заказ остаётся в цехе, пока не появится зерно.")); gw.forEach(o => body.append(orderCard(o, { day: TODAY, maxLines: 3 }))); } }
     if (!list.length) { body.append(h("div", { class: "empty" }, "Проблемных заказов нет")); return; }
     const resolve = (o, text) => { o.problem = null; o.hold = false; o.resolution = text; say("Решение отправлено в цех"); };
@@ -673,9 +674,9 @@ const VIEWS = {
             const keep = []; const np = {}; const stg = pr.from; o.lines.forEach((l, i) => { if (l[1] > 0) { np[keep.length] = { ok: true, qty: l[1], kg: null, why: null }; keep.push(l); } }); o.lines = keep; o.pk = { ...(o.pk || {}), [stg]: np }; o.kgManual = false; o.packsManual = false; recalcTotals(o);
             resolve(o, "Отгружаем собранное, недостающее ушло в недовоз " + o.doc + "-Н"); } }, "Отгрузить что есть, остаток → недовоз"));
         }
-        const back = pr.reason === "Нет зерна" ? "Зерно появилось: вернуть в работу" : "Решено: вернуть в работу";
+        const back = pr.reason === "Не хватило зерна" ? "Зерно появилось: вернуть в работу" : "Решено: вернуть в работу";
         if (!pr.waiting) acts.push(h("button", { class: "b g", onclick: () => { pr.waiting = true; say("Ждём: заказ остаётся у вас и директора"); } }, "Ждём, заказ остаётся у нас"));
-        acts.push(h("button", { class: pr.waiting ? "b g" : "b", onclick: () => resolve(o, pr.reason === "Нет зерна" ? "Зерно появилось, можно собирать" : "Вопрос решён, продолжайте") }, back));
+        acts.push(h("button", { class: pr.waiting ? "b g" : "b", onclick: () => resolve(o, pr.reason === "Не хватило зерна" ? "Зерно появилось, можно собирать" : "Вопрос решён, продолжайте") }, back));
         acts.push(h("button", { class: "b", onclick: () => resolve(o, "Документы заменены: везём то, что собрано") }, "Заменить документы"));
         if (lis.length && o.lines.length > lis.length) acts.push(h("button", { class: "b", onclick: () => { const miss = lis.map(i => clone(o.lines[i])); ST.orders.push({ ...clone(o), id: "o" + Date.now(), doc: o.doc + "-Н", customer: o.customer + " (недовоз)", lines: miss, stage: "new", f: {}, ship: addDays(TODAY, 2), created: TODAY, hist: [], done: null, hold: false, problem: null, resolution: null, taker: null, moved: 0, admit: "go" }); [...lis].sort((a, b) => b - a).forEach(i => o.lines.splice(i, 1)); o.pk = {}; resolve(o, "Отгружаем без позиций: " + miss.map(m => m[0]).join(", ") + ". Они пошли в недовоз"); } }, lis.length > 1 ? "Отгрузить без этих позиций → недовоз" : "Отгрузить без позиции → недовоз"));
         acts.push(h("button", { class: "b s", onclick: () => moveSheet(o, () => resolve(o, "Перенесён на " + fmtD(o.ship))) }, "Перенести…"));
@@ -726,7 +727,7 @@ const VIEWS = {
           boxesBadge(o),
           detailBtn(o),
           !past && ["manager", "boss"].includes(ST.role) ? mgrRow(o) : null,
-          !past && ["manager", "boss"].includes(ST.role) && si > 0 ? h("div", { class: "acts" }, h("button", { class: "b s", onclick: () => rollbackSheet(o, STAGES[si - 1].code) }, "Откатить на «" + STAGES[si - 1].title + "»")) : null,
+          !past && ["manager", "boss"].includes(ST.role) && si > 0 ? h("div", { class: "acts" }, h("button", { class: "b s", onclick: () => rollbackSheet(o, STAGES[si - 1].code) }, "Откатить на этап «" + STAGES[si - 1].title + "»")) : null,
           !past && mine ? (o.taker === ST.role ? h("div", { class: "acts" }, h("button", { class: "b g", onclick: () => doneSheet(o) }, "Передать → " + nxt), h("button", { class: "b s", onclick: () => askSheet(o) }, "Проблема"))
             : !o.taker ? h("div", { class: "acts" }, h("button", { class: "b g", disabled: locked || o.hold, onclick: () => takeOrder(o) }, locked ? "Не грузим — ждём" : o.hold ? "На допроверке" : "Взять в работу")) : null) : null));
       });
@@ -800,7 +801,7 @@ const VIEWS = {
     body.append(h("div", { class: "blk done" }, h("span", {}, "Требует внимания"), h("i", {}, P.length)));
     if (!P.length) body.append(h("div", { class: "mut" }, "Проблем нет"));
     P.forEach(o => body.append(h("button", { class: "ocard lnk", onclick: go("prob") }, h("div", { class: "row sp" }, h("span", { class: "num" }, "№ " + o.doc), h("span", { class: "mut" }, o.customer)), h("div", { class: "row" }, problemsOf(o).map(([k, t]) => h("span", { class: "pill " + k }, t))), o.problem && o.problem.text ? h("div", { class: "mut" }, o.problem.text) : null)));
-    { const gw = ST.orders.filter(o => o.grainWait && o.stage !== "done"); body.append(h("div", { class: "blk label" }, h("span", {}, "Ждут зерно"), h("i", {}, gw.length))); if (!gw.length) body.append(h("div", { class: "mut" }, "Нет")); gw.forEach(o => body.append(h("div", { class: "ocard" }, h("div", { class: "row sp" }, h("span", { class: "num" }, "№ " + o.doc), h("span", { class: "mut" }, o.customer)), h("div", { class: "mut" }, (o.grainWait.text || "Нет зерна") + " · " + o.grainWait.by + ", " + fmtD(o.grainWait.date))))); }
+    { const gw = ST.orders.filter(o => o.grainWait && o.stage !== "done"); body.append(h("div", { class: "blk label" }, h("span", {}, "Ждут зерно"), h("i", {}, gw.length))); if (!gw.length) body.append(h("div", { class: "mut" }, "Нет")); gw.forEach(o => body.append(h("div", { class: "ocard" }, h("div", { class: "row sp" }, h("span", { class: "num" }, "№ " + o.doc), h("span", { class: "mut" }, o.customer)), h("div", { class: "mut" }, (o.grainWait.text || "Не хватило зерна") + " · " + o.grainWait.by + ", " + fmtD(o.grainWait.date))))); }
     const G = ST.grain;
     body.append(h("div", { class: "blk done" }, h("span", {}, "Остаток зерна"), h("i", {}, G.length ? fmtD(G[0].day) : "нет")),
       G.length ? h("div", { class: "ocard" }, h("table", { class: "gr" }, G[0].rows.map(r => h("tr", {}, h("td", {}, r[0]), h("td", {}, (r[1] * 20) + " кг")))), h("div", { class: "mut" }, "Записал: " + G[0].who + " · по мешкам, приблизительно"),
