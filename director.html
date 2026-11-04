@@ -1,0 +1,112 @@
+<title>Учёт заказов цеха</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap" rel="stylesheet">
+<style>
+/* Одностраничник для директора: слева направо путь заказа, ниже что видит каждая роль, что готово и что нет, что нужно от директора. Спокойная деловая подача, цвет роли как в схеме цеха. */
+:root{
+  --bg:#f1f3f1; --panel:#ffffff; --ink:#18221f; --mut:#566660; --line:#d5dcd8;
+  --acc:#1d5f8a; --ok:#2f8a55; --warn:#b36d0c;
+  --w-mgr:#d9822b; --w-lab:#c9a50f; --w-pack:#3d83c9; --w-load:#3d9a5b; --w-dir:#7a5bb5;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-head:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12181a; --panel:#1b2427; --ink:#e7eeeb; --mut:#9bacaa; --line:#2f3d40;
+  --acc:#6bb4e6; --ok:#55c486; --warn:#e8a64a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12181a; --panel:#1b2427; --ink:#e7eeeb; --mut:#9bacaa; --line:#2f3d40;
+  --acc:#6bb4e6; --ok:#55c486; --warn:#e8a64a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5;
+  padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1{font-family:var(--font-head);font-size:clamp(26px,5vw,36px);line-height:1.15;margin:0;text-wrap:balance}
+h2{font-family:var(--font-head);font-size:21px;margin:0 0 10px;text-wrap:balance}
+p{margin:0}
+.lead{color:var(--mut);max-width:65ch;margin-top:8px}
+.tag{display:inline-block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.step{flex:1 1 130px;min-width:0;background:var(--panel);border:1px solid var(--line);border-top:5px solid var(--c,var(--line));border-radius:10px;padding:10px 12px}
+.step b{display:block;font-family:var(--font-head);font-size:17px}
+.step span{display:block;font-size:14px;color:var(--mut)}
+.note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:10px;max-width:75ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.card h3{font-family:var(--font-head);font-size:17px;margin:0 0 6px}
+.card ul,.list{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.card.ok h3{color:var(--ok)}
+.card.warn h3{color:var(--warn)}
+.q{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--acc);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.q b{font-family:var(--font-head);font-size:17px}
+.q span{color:var(--mut)}
+.qs{display:flex;flex-direction:column;gap:10px}
+a{color:var(--acc)}
+</style>
+<main>
+<header>
+  <div class="tag">Прототип для обсуждения</div>
+  <h1>Учёт заказов цеха вместо чата и таблицы</h1>
+  <p class="lead">Заказ приходит из 1С, менеджер решает, можно ли его собирать, и дальше он идёт по трём этапам цеха. Любая проблема попадает к менеджеру на экран, а не в общий чат. Это кликабельный прототип, чтобы вместе утвердить правила до настоящей разработки.</p>
+</header>
+
+<section>
+  <h2>Путь заказа</h2>
+  <div class="flow">
+    <div class="step" style="--c:var(--w-mgr)"><b>Менеджер</b><span>проверка, допуск, перенос даты</span></div>
+    <div class="step" style="--c:var(--w-lab)"><b>Расклейка</b><span>расклейщица, пачек расклеено</span></div>
+    <div class="step" style="--c:var(--w-pack)"><b>Сборка</b><span>старший смены, коробок и штук</span></div>
+    <div class="step" style="--c:var(--w-load)"><b>Отгрузка</b><span>грузчик, уехал или не уехал</span></div>
+    <div class="step" style="--c:var(--w-dir)"><b>Готово</b><span>видно в сводке директора</span></div>
+  </div>
+  <div class="note"><b>Допуск</b> ставит менеджер: «Грузим», «Грузим без оплаты», «Сборка без отгрузки» или «Не грузим». Цех видит только то, что ему можно делать сейчас. Слова допуска сотрудники цеха не видят.</div>
+  <div class="note"><b>Проблема</b> (не хватает пакетов, не уехал, ошибка в заказе) уходит менеджеру и вам. После решения заказ возвращается на тот этап, где остановился. Нехватка зерна не считается проблемой: у позиции стоит пометка, сотрудник сам решает, собирать ли остальное, а вы видите пометку в сводке.</div>
+</section>
+
+<section>
+  <h2>Что видит каждый</h2>
+  <div class="grid">
+    <div class="card"><h3>Расклейщица</h3><ul><li>Свои заказы на расклейку</li><li>Отмечает позиции и число пачек</li><li>Крафтовые мешки не клеит</li></ul></div>
+    <div class="card"><h3>Старший смены</h3><ul><li>Задания на сборку</li><li>Пишет коробки и фактическое число штук</li><li>В конце смены записывает остатки зерна</li></ul></div>
+    <div class="card"><h3>Грузчик</h3><ul><li>Заказы на отгрузку, число коробок крупно</li><li>Способ доставки и адрес</li><li>Отмечает «уехал» или «не уехал»</li></ul></div>
+    <div class="card"><h3>Менеджер</h3><ul><li>Новые заказы из 1С</li><li>Допуск, перенос даты, правка заказа</li><li>Проблемы и решения по ним</li></ul></div>
+    <div class="card"><h3>Директор</h3><ul><li>Сводка по цеху и остаткам зерна</li><li>Проблемные заказы и пометки «ждём зерно»</li><li>Все заказы по этапам</li></ul></div>
+  </div>
+</section>
+
+<section>
+  <h2>Что уже есть и чего ещё нет</h2>
+  <div class="grid">
+    <div class="card ok"><h3>Уже есть</h3><ul>
+      <li>Все пять экранов по ролям на телефоне и компьютере</li>
+      <li>Правила заказа по вашему процессу, записанные со слов смены</li>
+      <li>Автоматическая проверка переходов: 16 сценариев и 12 000 случайных нажатий без сбоев</li>
+      <li>Схема цеха, которую можно править</li>
+    </ul></div>
+    <div class="card warn"><h3>Ещё нет</h3><ul>
+      <li>Связи с 1С: пока демонстрационные заказы</li>
+      <li>Проверки на реальных заказах и с сотрудниками цеха</li>
+      <li>Сервера, резервных копий и входа по паролю</li>
+      <li>Уведомлений о проблемах в Telegram</li>
+    </ul></div>
+  </div>
+</section>
+
+<section>
+  <h2>Три вопроса к вам</h2>
+  <div class="qs">
+    <div class="q"><b>Заказ, где часть строк с ошибкой</b><span>Например, товара нет в справочнике. Принимать заказ целиком и подсвечивать менеджеру проблемные строки или не принимать вообще?</span></div>
+    <div class="q"><b>Документы при частичной отгрузке</b><span>Если уехало не то количество, документы переделывают. Должна ли система следить за этим или это остаётся в 1С?</span></div>
+    <div class="q"><b>Грузчик и частичная отгрузка</b><span>Нужна ли грузчику кнопка «уехал частично» или недовоз всегда решает менеджер?</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Что дальше</h2>
+  <ol class="list">
+    <li>Утверждаем правила на этой схеме и вносим ваши поправки.</li>
+    <li>Проверяем интерфейс на нескольких заказах вместе со сменой.</li>
+    <li>Подключаем 1С и запускаем пилот параллельно с таблицей на одну-две недели.</li>
+  </ol>
+</section>
+</main>
