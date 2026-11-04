@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Прототип интерфейса цеха</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap" rel="stylesheet">
+<style>
+/* Идея: телефон цеха в рамке, рядом пульт настройки прототипа: роль, что показывать на карточке, размер кнопок, замечания. */
+:root{
+  --bg:#e7ebe8; --panel:#ffffff; --ink:#15201d; --mut:#586964; --line:#d3dbd7;
+  --acc:#1d6b58; --acc-ink:#fff; --acc-soft:#dcefe8;
+  --warn:#8a5200; --warn-soft:#fdf0d5; --bad:#b0281c; --bad-soft:#fbe3e0;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-head:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --btn-h:46px; --fs:15px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1714; --panel:#17211e; --ink:#e6eeea; --mut:#9fb0aa; --line:#2a3a35;
+  --acc:#4cc3a3; --acc-ink:#06231b; --acc-soft:#17372f; --warn:#f0b45a; --warn-soft:#3a2c10; --bad:#ff8d80; --bad-soft:#3d1b17; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1714; --panel:#17211e; --ink:#e6eeea; --mut:#9fb0aa; --line:#2a3a35;
+  --acc:#4cc3a3; --acc-ink:#06231b; --acc-soft:#17372f; --warn:#f0b45a; --warn-soft:#3a2c10; --bad:#ff8d80; --bad-soft:#3d1b17; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--font-body)}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--font-head);font-weight:600;margin:0;text-wrap:balance}
+.wrap{max-width:980px;margin:0 auto;padding:16px}
+header.top{margin-bottom:14px}
+header.top h1{font-size:24px}
+.hint{font-size:13px;color:var(--mut)}
+.layout{display:grid;grid-template-columns:420px minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}.phone{width:100%}.pult{order:-1}}
+/* пульт */
+.pult{display:flex;flex-direction:column;gap:12px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.box h3{font-size:16px}
+.roles{display:flex;flex-wrap:wrap;gap:6px}
+.roles button,.seg button{border:1px solid var(--line);background:var(--panel);border-radius:20px;padding:5px 12px;cursor:pointer}
+.roles button[aria-pressed="true"],.seg button[aria-pressed="true"]{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.chk{display:flex;gap:8px;align-items:center;cursor:pointer}
+textarea.note{width:100%;min-height:70px;border:1px solid var(--line);border-radius:7px;padding:8px;background:var(--panel)}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 12px;cursor:pointer}
+.btn.pri{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:500}
+.notes{display:flex;flex-direction:column;gap:6px;max-height:240px;overflow:auto}
+.nt{border-left:3px solid var(--acc);padding:2px 8px;font-size:14px}
+.nt small{color:var(--mut);display:block}
+.status{font-size:13px;color:var(--mut)}
+/* телефон */
+.phone{width:410px;max-width:100%;background:#0f1714;border:3px solid #2a3a35;border-radius:28px;padding:10px;position:relative;justify-self:center}
+.screen{background:#f3f4f1;color:#15201d;border-radius:18px;overflow:hidden;position:relative;height:760px;display:flex;flex-direction:column;font-size:var(--fs)}
+.app-top{background:#111827;color:#fff;display:flex;align-items:center;gap:8px;padding:10px 14px;font-family:var(--font-head);font-size:18px}
+.app-top .who{margin-left:auto;font:13px var(--font-body);color:#c7d0cb}
+.body{flex:1;overflow:auto;padding:12px 12px 16px}
+.tabbar{display:flex;border-top:1px solid #d6dbd7;background:#fff}
+.tabbar button{flex:1;border:0;background:none;padding:8px 2px;font-size:12px;color:#5c6b66;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+.tabbar button .ic{font-size:19px;line-height:1}
+.tabbar button[aria-selected="true"]{color:#1d6b58;font-weight:600}
+.tabbar .badge{background:#c0392b;color:#fff;border-radius:9px;padding:0 6px;font-size:11px}
+.ph2{font-family:var(--font-head);font-size:20px;margin:2px 0 10px}
+.ph3{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#5c6b66;margin:12px 0 6px}
+.ocard{background:#fff;border:1px solid #d9ddd8;border-radius:12px;padding:12px;margin-bottom:10px;display:flex;flex-direction:column;gap:6px}
+.ocard.hold{border-color:#e6b980;background:#fffaf2}
+.ocard.lock{opacity:.78;background:#f7f2f1;border-color:#e3b0ab}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.sp{justify-content:space-between;align-items:flex-start}
+.num{font-family:var(--font-head);font-size:18px}
+.mut{color:#5c6b66;font-size:13px}
+.lines{margin:0;padding-left:16px;font-size:14px}
+.pill{display:inline-block;border-radius:20px;padding:1px 9px;font-size:12px;background:#e8ebe8;color:#33403b}
+.pill.ok{background:#dcefe8;color:#1d6b58}.pill.warn{background:#fdf0d5;color:#8a5200}.pill.bad{background:#fbe3e0;color:#b0281c}.pill.blue{background:#dbe9f7;color:#1f4f82}
+.acts{display:flex;gap:8px;margin-top:4px}
+.b{flex:1;border:1px solid #c9cfca;background:#fff;border-radius:10px;min-height:var(--btn-h);padding:4px 8px;cursor:pointer;font-weight:500}
+.b.g{background:#2b8a63;color:#fff;border-color:#2b8a63}
+.b.s{flex:0 0 auto;min-height:36px;font-weight:400;font-size:14px}
+.b[disabled]{opacity:.5;cursor:not-allowed}
+.blk{display:flex;justify-content:space-between;border-radius:10px;padding:7px 12px;margin:14px 0 8px;font-weight:600}
+.blk i{font-style:normal;background:#fff;border-radius:12px;padding:0 9px}
+.blk.roast{background:#f6dcc8}.blk.label{background:#fdf1b8}.blk.pack{background:#cfe3f7}.blk.ship{background:#d3ecd3}.blk.done{background:#e3e6e3}
+.daynav{display:flex;gap:8px;margin-bottom:8px}
+.daynav .b{flex:0 0 44px;min-height:40px}
+.daynav .cur{flex:1;text-align:center;align-self:center;font-weight:600}
+.sel{border:1px solid #c9cfca;border-radius:8px;padding:4px 6px;background:#fff;font-size:13px}
+.reqbox{background:#f4f6f3;border-radius:8px;padding:6px 10px;font-size:13px}
+.reqbox ul{margin:4px 0 0;padding-left:16px}
+.ov{position:absolute;inset:0;background:rgba(15,23,20,.45);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:#fff;width:100%;max-height:88%;overflow:auto;border-radius:18px 18px 0 0;padding:16px;display:flex;flex-direction:column;gap:8px}
+.sheet h2{font-family:var(--font-head);font-size:20px;margin:0}
+.sheet label{font-size:13px;color:#5c6b66}
+.sheet input,.sheet textarea,.sheet select{width:100%;border:1px solid #c9cfca;border-radius:8px;padding:9px 10px;min-height:var(--btn-h);background:#fff}
+.sheet textarea{min-height:70px}
+.opt{display:flex;gap:10px;align-items:center;border:1px solid #c9cfca;border-radius:10px;min-height:var(--btn-h);padding:6px 10px;cursor:pointer}
+.opt.on{border-color:#2b8a63;background:#eaf6ef}
+.toast{position:absolute;left:12px;right:12px;bottom:70px;background:#15201d;color:#fff;border-radius:10px;padding:10px 14px;z-index:4;font-size:14px}
+.cells{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.cell{background:#f4f6f3;border-radius:8px;padding:4px 7px;min-width:0}.cell small{display:block;color:#5c6b66;font-size:11px}.cell b{font-size:14px;font-weight:500;overflow-wrap:anywhere}.cells2{display:grid;grid-template-columns:1fr 1fr;gap:8px}input.inl,textarea.inl{width:100%;border:1px solid #c9cfca;border-radius:8px;padding:8px;min-height:var(--btn-h);background:#fff;color:#15201d}.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tile{border:0;text-align:left;border-radius:18px;padding:12px 14px;background:#fffdf9;box-shadow:0 1px 2px rgba(60,40,20,.08),0 6px 18px rgba(60,40,20,.06);cursor:pointer;display:flex;flex-direction:column;gap:2px;color:#2b1f18}.tile b{font:600 30px var(--font-head)}.tile span{font-size:13px;color:#7a6657}.tile.bad{background:#fbd9d3}.tile.warn{background:#fde8b8}.tile.ok{background:#dcefdf}.srow{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}.bar{height:8px;border-radius:4px;background:#e5dccf;overflow:hidden}.bar i{display:block;height:100%}.bar.roast i{background:#c2602b}.bar.label i{background:#e0b020}.bar.pack i{background:#3d83c9}.bar.ship i{background:#3d9a5b}.ocard.lnk{border:0;text-align:left;width:100%;cursor:pointer;margin-bottom:10px;color:#2b1f18}.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.chip{border:1.5px solid #d8cdbf;background:#fffdf9;border-radius:20px;padding:6px 12px;color:#4a3a2e;cursor:pointer}.chip.on{background:#2b1f18;color:#fff;border-color:#2b1f18}.empty{text-align:center;color:#5c6b66;padding:30px 10px}
+table.gr{width:100%;border-collapse:collapse;font-size:14px}
+table.gr td,table.gr th{padding:6px 4px;border-bottom:1px solid #e3e6e3;text-align:left}
+
+/* ===== редизайн экрана телефона: тёплая палитра, крупные карточки ===== */
+.screen{background:#f5f0e8;color:#2b1f18}
+.app-top{background:#f5f0e8;color:#2b1f18;padding:14px 16px 6px;font-size:13px;border-bottom:0}
+.app-top span:first-child{font:600 13px var(--font-body);letter-spacing:.06em;text-transform:uppercase;color:#7a6657}
+.app-top .who{color:#7a6657}
+.ph2{font-family:var(--font-head);font-size:28px;line-height:1.1;margin:4px 0 10px;color:#2b1f18}
+.body{padding:6px 14px 18px}
+.mut{color:#7a6657}
+.ocard{background:#fffdf9;border:0;border-radius:18px;padding:14px 16px;gap:8px;box-shadow:0 1px 2px rgba(60,40,20,.08),0 6px 18px rgba(60,40,20,.06)}
+.ocard.hold{background:#fff6e4}.ocard.lock{background:#f1ebe4;opacity:.85}
+.num{font-size:22px;letter-spacing:.01em}
+.pill{background:#efe7dc;color:#4a3a2e;font-weight:500;padding:3px 10px}
+.pill.ok{background:#dcefdf;color:#1d6a3a}.pill.warn{background:#fde8b8;color:#7a4a00}.pill.bad{background:#fbd9d3;color:#a32116}.pill.blue{background:#e1e9f5;color:#25466f}
+.steps{display:flex;gap:4px;margin:2px 0 4px}
+.stp{flex:1;display:flex;flex-direction:column;gap:3px;font-size:10.5px;color:#9a8878;text-align:center}
+.stp i{height:5px;border-radius:3px;background:#e5dccf}
+.stp.d i{background:#6bb58a}.stp.c i{background:#d9822b}.stp.c{color:#2b1f18;font-weight:600}
+.b{border-radius:14px;border:1.5px solid #d8cdbf;background:#fffdf9;min-height:var(--btn-h)}
+.b.g{background:#2b1f18;border-color:#2b1f18;color:#fff;font-size:1.05em;font-weight:600}
+.b.g[disabled]{background:#cfc4b7;border-color:#cfc4b7}
+.blk{border-radius:0!important;background:none!important;padding:2px 2px;margin:18px 0 8px;font:600 13px var(--font-body);text-transform:uppercase;letter-spacing:.07em;color:#7a6657;border-left:5px solid #d9822b;padding-left:10px}
+.blk.roast{border-color:#c2602b}.blk.label{border-color:#e0b020}.blk.pack{border-color:#3d83c9}.blk.ship{border-color:#3d9a5b}.blk.done{border-color:#aaa}
+.blk i{background:#2b1f18;color:#fff;font-weight:600}
+.tabbar{background:#fffdf9;border-top:0;box-shadow:0 -6px 20px rgba(60,40,20,.08);padding:6px 8px 8px;gap:4px}
+.tabbar button{border-radius:14px;color:#8b7767;padding:7px 2px}
+.tabbar button[aria-selected="true"]{background:#2b1f18;color:#fff}
+.daynav .b{border-radius:14px}
+.sheet{background:#fffdf9;border-radius:26px 26px 0 0}
+.sheet input,.sheet textarea,.sheet select,input.inl,textarea.inl{border:1.5px solid #d8cdbf;border-radius:14px;background:#fff}
+.opt{border-radius:14px;border-width:1.5px}.opt.on{border-color:#2b1f18;background:#f1ebe4}
+.reqbox,.cell{background:#f5efe6;border-radius:12px}
+.b.on{background:#2b1f18;color:#fff;border-color:#2b1f18}.hl{background:#fde58a;border-radius:6px;padding:0 5px}.bigchk{width:28px;height:28px;accent-color:#2b1f18;flex:none}.prow{display:grid;grid-template-columns:1fr 92px;gap:8px 12px;align-items:center}.pchk{display:flex;gap:12px;align-items:center;cursor:pointer}.prow.pok{background:#eef7ef}.prow.pshort{background:#fff1ee}.pq{display:flex;flex-direction:column;gap:2px}.qin{padding:6px 8px;min-height:44px}.sheet .plist,.plist{flex:none}.plist{background:#fff;border:1px solid #e6dfd3;border-radius:12px;overflow:hidden}.pl{display:grid;grid-template-columns:20px 1fr auto 30px;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid #eee7db}.pl:last-child{border-bottom:0}.pl input[type=checkbox]{width:20px;height:20px;accent-color:#2b1f18;margin:0}.pl.pok{background:#f3f9f4}.pl.pbad{background:#fff3ef}.pn{font-size:14px;line-height:1.25;min-width:0}.pn small{display:block;color:#b3261e}.pv{font-size:14px;white-space:nowrap}.dots{width:30px;height:30px;border:1px solid #d8cfc0;border-radius:8px;background:#fff;font-size:18px;line-height:1;padding:0;cursor:pointer}.lt{display:flex;flex-direction:column;gap:2px;font-size:14px}.lr{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:3px 0;border-bottom:1px dashed #e6dfd3}.lr:last-child{border-bottom:0}.ln{min-width:0}.lq{font-weight:700;white-space:nowrap}.lw{color:#6b5f50;white-space:nowrap;min-width:64px;text-align:right}.link{background:none;border:0;color:#2b5d8a;padding:4px 0;font-size:13px;cursor:pointer;align-self:flex-start}.erow{display:grid;grid-template-columns:1fr 70px 30px;gap:6px}.boxbig{font-weight:700;font-size:17px;background:#d3ecd3;border-radius:10px;padding:6px 12px;align-self:flex-start}.stack{display:flex;flex-direction:column;gap:8px}.stack .b{flex:none;width:100%}.stack .row .b{width:auto;flex:0 0 auto;padding:4px 16px}.toast{background:#2b1f18;border-radius:14px}.acts .b.g{flex:2.2;white-space:nowrap}.acts .b.s{padding:4px 12px}
+
+.cols{display:block}
+.desk .wrap{max-width:1560px}
+.desk .layout{grid-template-columns:minmax(0,1fr)}
+.desk .phone{width:100%;max-width:none;background:none;border:0;padding:0;border-radius:0}
+.desk .screen{height:calc(100vh - 170px);min-height:620px;display:grid;grid-template-columns:220px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);border-radius:16px;box-shadow:0 8px 30px rgba(40,25,10,.18)}
+.desk .tabbar{grid-column:1;grid-row:1/3;flex-direction:column;justify-content:flex-start;padding:16px 12px;gap:6px;box-shadow:none;border-right:1px solid #e3d9cb}
+.desk .tabbar button{flex-direction:row;justify-content:flex-start;gap:12px;font-size:15px;padding:12px 14px}
+.desk .tabbar button{flex:none}.desk .tabbar button .ic{font-size:20px}.sec{break-inside:avoid;margin-bottom:6px}
+.desk .app-top{grid-column:2;padding:16px 26px 4px}
+.desk .body{grid-column:2;padding:6px 26px 26px}
+.desk .pult{order:2;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:start}
+.desk .cols{display:block}.desk .cols .col{margin-bottom:18px}.desk .cols .col>.ocard{display:inline-flex;vertical-align:top}.desk .cols .col{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:12px;align-items:start}.desk .cols .col>.blk,.desk .cols .col>.mut{grid-column:1/-1}
+.desk .tiles{grid-template-columns:repeat(6,1fr)}
+.desk .body.sum,.desk .body.grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:12px 20px;align-items:start;align-content:start}
+.desk .body.sum>*,.desk .body.grid3>*{break-inside:avoid;min-width:0}.desk .body.sum .sec>.ocard{margin-bottom:10px}
+.desk .body .ph2,.desk .body .tiles,.desk .body .chips,.desk .body input.inl,.desk .body>.mut,.desk .body .daynav,.desk .body>.acts,.desk .body .empty,.desk .body.sum>.blk,.desk .body.grid3>.blk{grid-column:1/-1}
+.desk .daynav{max-width:520px}
+.desk .ov{align-items:center;justify-content:center}
+.desk .sheet{max-width:560px;border-radius:22px;max-height:90%}
+.desk .toast{left:244px;right:auto;max-width:440px;bottom:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Прототип интерфейса цеха</h1>
+    <div class="hint">Кликабельный макет на выдуманных данных. Выберите роль справа, пройдите её день, а неудобное запишите в замечания: они сохранятся и я их прочитаю. В макете есть то, чего в платформе ещё нет: допуск «Грузим», Честный знак, база, недовоз, остаток зерна.</div>
+  </header>
+  <div class="layout">
+    <div class="phone"><div class="screen" id="screen"></div></div>
+    <aside class="pult" id="pult"></aside>
+  </div>
+</div>
+<script>
+"use strict";
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2), v);
+    else if (k === "class") el.className = v;
+    else if (["value", "checked", "disabled", "selected"].includes(k)) el[k] = v;
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat(Infinity)) { if (kid == null || kid === false) continue; el.append(kid instanceof Node ? kid : document.createTextNode(String(kid))); }
+  return el;
+}
+const clone = o => JSON.parse(JSON.stringify(o));
+const TODAY = "2026-11-02";
+const addDays = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const diffDays = (a, b) => Math.round((new Date(a + "T12:00:00Z") - new Date(b + "T12:00:00Z")) / 86400000);
+const fmtD = iso => iso ? iso.slice(8, 10) + "." + iso.slice(5, 7) : "";
+
+/* ============================================================ справочники */
+const STAGES = [
+  { code: "label", title: "Расклейка", role: "labeler", fields: [{ code: "packs", title: "Пачек расклеено" }] },
+  { code: "pack", title: "Сборка", role: "packer", fields: [{ code: "boxes", title: "Коробок" }, { code: "pcs", title: "Фактически собрано, шт" }] },
+  { code: "ship", title: "Отгрузка", role: "loader", fields: [] }
+];
+const ROLES = [["labeler", "Расклейщица"], ["packer", "Фасовщик (старший смены)"], ["loader", "Грузчик"], ["manager", "Менеджер по продажам"], ["boss", "Директор"]];
+const ADMIT = { go: ["Грузим", "ok"], nopay: ["Грузим без оплаты", "ok"], noship: ["Сборка без отгрузки", "warn"], stop: ["Не грузим", "bad"] };
+// «Не грузим»: цех не собирает и не отгружает; «Сборка без отгрузки»: собирают, но грузчику не отдают; «Грузим без оплаты»: как «Грузим», менеджер и директор видят пометку
+function lockedFor(o, code) { return (o.admit === "stop" && (code === "pack" || code === "ship")) || (o.admit === "noship" && code === "ship"); }
+const DELIVERY = ["Самовывоз", "Курьер", "ТК СДЭК", "Своя доставка"];
+const ADDR = {};
+const GRAINS = ["Бразилия", "Робуста", "2ГР", "Кения", "Колумбия", "Декаф", "4ГР", "Дарк", "Малабар", "Brazil Filter", "Brazil Rancho Grande Filter", "Columbia Filter", "Columbia Los Brisas Filter", "Columbia Altocielo Filter", "Indonesia Java Filter", "Ethiopia 2gr Filter", "Ethiopia 1gr E", "Ethiopia 1gr F", "Kenya", "Какао", "Натурал", "Интенсив", "Милки", "Чоко"];
+const REQS = ["Вес пачки не менее 1040 г", "Пакеты чистые; перед запайкой 250 г закрыть зип-лок", "Швы запаивать ровно", "В коробку пачки класть боком, коробки подписать, сорта рядом",
+  "Обжарка однотонная; много битых зёрен: прогнать 2 раза через дестонер", "Паллета евро 80×120, высота 4 ряда, стрейч 4–5 слоёв", "Доставка до 16:00, позже только по согласованию", "Документы по ЭДО"];
+const P = {
+  BR: "Бразилия Сантос, СТМ, 1000 гр", BR25: "Бразилия Сантос, СТМ, 250 гр", RB: "Робуста, СТМ, 1000 гр", KOL: "Колумбия Супремо, СТМ, 1000 гр", KEN: "Кения АА, СТМ, 1000 гр",
+  G2: "Смесь №2, СТМ, 1000 гр", G4: "Смесь №4, СТМ, 1000 гр", DEC: "Декаф, СТМ, 1000 гр", NAT: "Натурал, СТМ, 1000 гр", INT: "Интенсив, СТМ, 1000 гр", MAL: "Малабар, СТМ, 1000 гр", MEX: "Мексика Чьяпас, СТМ, 1000 гр",
+  ORX: "Орех в меде, СТМ, 1000 гр", HAW: "Гавайский орех, СТМ, 1000 гр", VAN: "Ваниль, СТМ, 1000 гр",
+  MIN: "Миндаль, СТМ, в крафт мешке, 10 кг", SLV: "Сливки в малине, СТМ, в крафт мешке, 10 кг", VIS: "Вишня в шоколаде, СТМ, в крафт мешке, 10 кг", BAN: "Банановый шейк, СТМ, в крафт мешке, 10 кг", DUB: "Дубайский шоколад, СТМ, в крафт мешке, 10 кг", IRL: "Ирландский крем, СТМ, в крафт мешке, 20 кг",
+  TEA: "Чай чёрный листовой, 100 гр", SMP: "Образцы (набор)"
+};
+const L = (k, n) => [P[k], n, "шт"];
+const CATALOG_NAMES = Object.values(P);
+const D = n => addDays(TODAY, n);
+function seed() {
+  // [id, номер, клиент, база, создан, отгрузка, ЧЗ, допуск, этап, состав, позиции, доставка, адрес, прочее]
+  const O = (id, doc, cust, base, created, ship, cz, admit, stage, sostav, lines, deliv, addr, extra) => Object.assign({ id, doc, customer: cust, base, created, ship, cz, admit, stage, sostav, lines, deliv, addr: addr || "—", reqs: null, f: {}, hold: false, done: null, moved: 0, from1c: true }, extra || {});
+  return withHist([
+    // ---- Расклейка
+    O("o1", "НФНЛ-003431", "ИП Орлов К. В. (э)", "Луна", "2026-10-28", D(0), true, "go", "label", "13 бр, 12 4гр, чай", [L("BR", 13), L("G4", 12), L("TEA", 6)], "Курьер", "Москва, ул. Лесная, 12"),
+    O("o2", "НФНЛ-003433", "ООО «Кофе-Мейкер» / ек", "Луна", "2026-10-28", D(0), true, "go", "label", "6 бр, 5 кол, 1 4гр, 1 2гр", [L("BR", 6), L("KOL", 5), L("G4", 1), L("G2", 1)], "ТК СДЭК", "Тверь, ул. Складская, 4"),
+    O("o3", "НФНЛ-003436", "ИП Клубкова М. А.", "Троица", "2026-10-28", D(0), false, "go", "label", "50 бр", [L("BR25", 50)], "Самовывоз"),
+    O("o4", "НФНЛ-003437", "ООО «Тимсервис»", "Луна", "2026-10-28", D(0), false, "stop", "label", "48 бр, 12 2гр", [L("BR", 48), L("G2", 12)], "Своя доставка", "Химки, Ленинградская, 8"),
+    O("o5", "НФНЛ-003441", "ИП Хмелевская Е. А. (э)", "Луна", "2026-10-29", D(1), true, "go", "label", "35 бр, 1 декаф, 2 натурал, 2 интенсив", [L("BR", 35), L("DEC", 1), L("NAT", 2), L("INT", 2)], "Курьер", "Москва, Тверская, 21"),
+    O("o6", "НФНЛ-003420", "ИП Пуйсан А. О.", "Луна", "2026-10-26", D(0), false, "go", "label", "11 бр, 10 4гр", [L("BR", 11), L("G4", 10)], "ТК СДЭК", "Рязань, ул. Мира, 9", { hold: true, problem: { reason: "Нет наклеек", lines: [1], text: "Наклеек на смесь №4 нет, осталось на 4 пачки из 10", from: "label", by: "Расклейщица" } }),
+    // ---- Сборка
+    O("o7", "НФНЛ-003464", "ООО «Сок-Маркет»", "Луна", "2026-10-27", D(1), true, "go", "pack", "12 ароматиз., 9 мешков", [L("ORX", 3), L("HAW", 3), L("MEX", 3), L("VAN", 3), L("MIN", 1), L("SLV", 1), L("VIS", 1), L("BAN", 1), L("DUB", 1), L("IRL", 5)], "Своя доставка", "Москва, Арбат, 3", { reqs: REQS, f: { label: { packs: "12" } } }),
+    O("o8", "НФНЛ-003355", "ИП Титов В. (Jeffrey's)", "Луна", "2026-10-22", D(0), true, "go", "pack", "6 кол, 4 2гр, 6 бр", [L("KOL", 6), L("G2", 4), L("BR", 6)], "Курьер", "Москва, Пятницкая, 5", { mgr: "move", moved: 1, ship0: "2026-10-29", f: { label: { packs: "16" } } }),
+    O("o9", "НФНЛ-003398", "ООО «Два кофейных маньяка» / ек", "Луна", "2026-10-26", D(-1), true, "go", "pack", "65 бр, 40 кол, 2 малабар, 6 2гр, 5 4гр", [L("BR", 65), L("KOL", 40), L("MAL", 2), L("G2", 6), L("G4", 5)], "ТК СДЭК", "Казань, ул. Баумана, 15", { mgr: "move", moved: 1, ship0: "2026-10-30", f: { label: { packs: "118" } } }),
+    O("o10", "НФНЛ-003424", "ИП Носков Б. А.", "Луна", "2026-10-28", D(0), false, "stop", "pack", "9 бр, 5 кол, 1 4гр, 1 2гр", [L("BR", 9), L("KOL", 5), L("G4", 1), L("G2", 1)], "Самовывоз", "—", { f: { label: { packs: "16" } } }),
+    O("o11", "НФНЛ-003381", "ООО «Нила Спрингс» / ек (э)", "Луна", "2026-10-26", D(-1), true, "go", "pack", "400 бр, 110 роб", [L("BR", 400), L("RB", 110)], "Своя доставка", "Москва, Варшавское ш., 41", { moved: 1, ship0: "2026-10-30", f: { label: { packs: "510" } } }),
+    // ---- Отгрузка
+    O("o12", "НФНЛ-003048", "ИП Димов А. А.", "Троица", "2026-10-01", D(0), true, "go", "ship", "50 бр, 50 4гр", [L("BR", 50), L("G4", 50)], "Курьер", "Москва, Ленинский пр., 7", { f: { label: { packs: "100" }, pack: { boxes: "10", pcs: "100" } } }),
+    O("o13", "00УФ-001599", "Розничный клиент", "Троица", "2026-10-22", D(0), false, "go", "ship", "розница", [L("BR25", 7)], "Самовывоз", "—", { f: { label: { packs: "7" }, pack: { boxes: "1", pcs: "7" } } }),
+    O("o14", "НФНЛ-003374", "ООО «Юринская кофе» / Combo coffee", "Луна", "2026-10-27", D(0), true, "go", "ship", "1150 бр, 600 роб, 80 кол, 120 4гр, 5 натурал", [L("BR", 1150), L("RB", 600), L("KOL", 80), L("G4", 120), L("NAT", 5)], "Своя доставка", "Москва, Каширское ш., 22", { f: { label: { packs: "1955" }, pack: { boxes: "78", pcs: "1955" } } }),
+    // ---- Готово сегодня
+    O("o15", "НФНЛ-003410", "ООО «Омега Тест Групп»", "Луна", "2026-10-27", D(0), true, "go", "done", "20 дарк", [["Дарк, СТМ, 1000 гр", 20, "шт"]], "Курьер", "Москва, Пятницкая, 5", { done: TODAY, f: { label: { packs: "20" }, pack: { boxes: "2", pcs: "20" } } }),
+    // ---- Новые из 1С
+    O("o16", "НФНЛ-003438-Н", "ИП Румянцева Е. В. (э)", "Луна", D(0), D(1), false, "go", "new", "НЕДОВОЗ: 25 кения", [L("KEN", 25)], "Курьер", "Москва, ул. Новая, 3"),
+    O("o17", "00УФ-001618", "Кафе ТМ3", "Троица", D(0), D(0), false, "go", "new", "30 2гр, мелочовка, 1 натурал", [L("G2", 30), L("NAT", 1)], "Самовывоз"),
+    O("o18", "00УФ-001593", "ОБРАЗЦЫ", "Троица", D(0), D(1), false, "go", "new", "образцы", [L("SMP", 1)], "Самовывоз")
+  ]);
+}
+function withHist(list) { list.forEach(o => { o.hist = ({ label: [], pack: [[D(-1), "pack"]], ship: [[D(-2), "pack"], [D(-1), "ship"]], done: [[D(-2), "pack"], [D(-1), "ship"], [D(0), "done"]], new: [] })[o.stage] || []; o.hist = o.hist.map(e => [e[0], e[1]]); o.taker = null; o.created = o.created || TODAY; }); return list; }
+function stageOn(o, D) { if (D >= TODAY) return o.stage; if (o.created > D) return null; let st = "label"; (o.hist || []).forEach(e => { if (e[0] <= D) st = e[1]; }); return st; }
+function shipOn(o, D) { return D >= TODAY ? o.ship : (o.ship0 || addDays(o.ship, -o.moved)); }
+const POOL = [
+  ["ИП Сидоров Н. П.", "Луна", false, [[P.BR, 20, "шт"], [P.G4, 5, "шт"]]],
+  ["ООО «Прима»", "Троица", true, [[P.KOL, 24, "шт"]]],
+  ["Магазин «Восток» (э)", "Луна", false, [[P.BR, 30, "шт"], [P.VAN, 4, "шт"]]],
+  ["Бар «Ночь»", "Луна", false, [[P.RB, 12, "шт"]]],
+  ["Кофе-клуб / ек", "Троица", true, [[P.KOL, 40, "шт"], [P.BR25, 20, "шт"]]],
+  ["ИП Громов А. Т.", "Луна", false, [[P.ORX, 6, "шт"], [P.IRL, 2, "шт"]]]
+];
+let docSeq = 3470, poolPos = 0;
+function loadFrom1C() {
+  const n = 3, add = [];
+  for (let i = 0; i < n; i++) { const t = POOL[poolPos++ % POOL.length]; add.push({ id: "n" + Date.now() + i, doc: "НФНЛ-00" + (docSeq++), customer: t[0], base: t[1], ship: addDays(TODAY, i), cz: t[2], admit: "go", lines: clone(t[3]), reqs: null, stage: "new", f: {}, hold: false, done: null, moved: 0, hist: [], created: TODAY, taker: null, from1c: true, deliv: DELIVERY[i % 4], addr: i % 4 === 0 ? "—" : "Москва, ул. Новая, " + (3 + i) }); }
+  ST.orders.push(...add); ST.last1c = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }); return n;
+}
+function toWork(o) { o.stage = "label"; (o.hist = o.hist || []).push([TODAY, "label"]); }
+function problemsOf(o) {
+  const r = [];
+  if (o.problem) r.push(["bad", o.problem.reason]);
+  if (o.admit === "stop") r.push(["warn", "Не оплачен: допуск «Не грузим»"]);
+  return r;
+}
+const ALLON = { admit: true, cz: true, base: true, fields: true, reqs: false, deliv: true, created: true };
+const ROLE_VIEW = {
+  labeler: { admit: false, cz: true, base: false, fields: false, reqs: false, deliv: false, created: false },
+  packer: { admit: false, cz: false, base: true, fields: true, reqs: false, deliv: false, created: false },
+  loader: { admit: false, cz: false, base: true, fields: true, reqs: false, deliv: true, created: true },
+  manager: { ...ALLON }, boss: { ...ALLON }
+};
+const DEFAULT_VIEW = { big: "normal", roles: clone(ROLE_VIEW) };
+function mergeView(saved) { const v = { big: (saved && saved.big) || "normal", roles: clone(ROLE_VIEW) }; Object.entries((saved && saved.roles) || {}).forEach(([r, o]) => { v.roles[r] = { ...(v.roles[r] || ALLON), ...o }; }); return v; }
+const isMgr = () => ["manager", "boss"].includes(ST.role);
+const RV = key => ((ST.view.roles || {})[ST.role] || ALLON)[key];
+
+/* ============================================================ состояние */
+const CATALOG0 = Object.fromEntries(Object.values(P).map(n => [n, null]));
+let ST = { catalog: clone(CATALOG0), device: window.innerWidth >= 1100 ? "desk" : "phone", orders: seed(), questions: [], grain: [], notes: [], view: clone(DEFAULT_VIEW), role: "packer", tab: "tasks", day: TODAY, toast: "" };
+let doc = null, mode = "pending", dirty = false, saveTimer = null, saving = false;
+
+const roleName = r => (ROLES.find(x => x[0] === r) || [])[1] || r;
+function takeOrder(o) { o.taker = ST.role; say("Взято в работу: теперь это ваше задание"); }
+function stageIdx(code) { return STAGES.findIndex(s => s.code === code); }
+function stageTitle(code) { return code === "done" ? "Готово" : code === "new" ? "Новый" : (STAGES.find(s => s.code === code) || {}).title || code; }
+function roleOfStage(code) { return (STAGES.find(s => s.code === code) || {}).role; }
+function tabsFor(role) {
+  if (role === "manager") return [["new", "⬇", "Новые"], ["list", "▤", "Цех"], ["prob", "!", "Проблемные"]];
+  if (role === "boss") return [["sum", "◉", "Сводка"], ["list", "▤", "Цех"], ["orders", "☰", "Заказы"], ["prob", "!", "Проблемные"]];
+  const t = [["list", "▤", "Лист"], ["orders", "✓", "Мои заказы"]];
+  return t;
+}
+function myStage(role) { return (STAGES.find(s => s.role === role) || {}).code; }
+function qFor(role) { return ST.questions.filter(q => q.open && (role === "boss" || role === "manager" || roleOfStage(q.to) === role)); }
+function say(t) { ST.toast = t; render(); setTimeout(() => { if (ST.toast === t) { ST.toast = ""; render(); } }, 2200); }
+function touch() { dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(save, 700); document.getElementById("saveStatus") && (document.getElementById("saveStatus").textContent = "Есть несохранённые замечания и настройки…"); }
+
+/* ============================================================ сохранение (только вид и замечания) */
+async function save() {
+  if (saving) { saveTimer = setTimeout(save, 400); return; }
+  saving = true; dirty = false;
+  const data = { view: ST.view, notes: ST.notes, savedAt: new Date().toISOString() };
+  try {
+    if (mode === "db" && doc) await doc.set(data); else localStorage.setItem("tcs-proto", JSON.stringify(data));
+    const el = document.getElementById("saveStatus"); if (el) el.textContent = (mode === "db" ? "Сохранено" : "Сохранено в этом браузере") + " в " + new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  } catch (e) { const el = document.getElementById("saveStatus"); if (el) el.textContent = "Не удалось сохранить. Скопируйте замечания вручную."; }
+  saving = false; if (dirty) { saveTimer = setTimeout(save, 700); }
+}
+async function initStore() {
+  try {
+    if (!window.claude || !window.claude.use) throw new Error("no runtime");
+    const db = await Promise.race([window.claude.use("db"), new Promise(r => setTimeout(() => r(null), 10000))]);
+    if (!db) throw new Error("no db");
+    doc = db.doc("proto/main"); mode = "db";
+    const snap = await doc.get();
+    if (snap.exists) { const d = snap.data(); ST.view = mergeView(d.view); ST.notes = d.notes || []; }
+  } catch (e) {
+    mode = "local";
+    try { const raw = localStorage.getItem("tcs-proto"); if (raw) { const d = JSON.parse(raw); ST.view = mergeView(d.view); ST.notes = d.notes || []; } } catch (e2) { /* без хранилища браузера работаем в памяти */ }
+  }
+  render();
+}
+
+/* ============================================================ карточка заказа */
+function steps(o, D) {
+  const cur = stageOn(o, D || TODAY), ci = cur === "done" ? STAGES.length : stageIdx(cur);
+  return h("div", { class: "steps", "aria-label": "Этап: " + stageTitle(cur) }, STAGES.map((s, i) => h("div", { class: "stp" + (i < ci ? " d" : i === ci ? " c" : "") }, h("i", {}), h("span", {}, s.title))));
+}
+function isKraft(n) { return /крафт|мешо?к/i.test(n); }
+function idxs(o) { return o.lines.map((l, i) => i).filter(i => o.stage !== "label" || !isKraft(o.lines[i][0])); }
+function sortVolumes(o) {
+  const m = new Map();
+  o.lines.forEach(l => { const sort = l[0].split(",")[0].trim(), w = wOf(l[0]); const e = m.get(sort) || { kg: 0, pcs: 0, unknown: false }; e.pcs += +l[1] || 0; if (w > 0) e.kg += w * (+l[1] || 0); else e.unknown = true; m.set(sort, e); });
+  return [...m.entries()];
+}
+function lineKgText(l) { const w = wOf(l[0]); return w > 0 ? fmtKg(w * (+l[1] || 0)) : "вес не задан"; }
+function linesView(o, max) {
+  const base = ST.role === "labeler" ? o.lines.filter(l => !isKraft(l[0])) : o.lines;
+  const shown = base.slice(0, max || 99);
+  return h("div", { class: "lt" }, shown.map(l => h("div", { class: "lr" }, h("span", { class: "ln" }, l[0]), h("span", { class: "lq" }, l[1] + " " + l[2]), h("span", { class: "lw" }, lineKgText(l)))), base.length > shown.length ? h("div", { class: "mut" }, "и ещё " + (base.length - shown.length)) : null);
+}
+function boxesBadge(o) { const n = (o.f.pack || {}).boxes; return n && ST.role === "loader" ? h("div", { class: "boxbig" }, "Коробок: " + n) : null; }
+function grainBlock(o) {
+  if (!o.grainWait) return null;
+  const g = o.grainWait, can = ST.role === "packer" || isMgr();
+  return h("div", { class: "reqbox" }, h("span", { class: "pill warn" }, "Ждём зерно"), h("div", { class: "mut" }, g.by + ", " + fmtD(g.date) + (g.text ? ": " + g.text : "")),
+    can ? h("button", { class: "b s", style: "margin-top:6px", onclick: () => { o.grainWait = null; say("Зерно появилось: заказ снова в обычной работе"); } }, "Зерно появилось") : null);
+}
+function detailBtn(o) { return h("button", { class: "link", onclick: () => { ST.detail = o.id; render(); } }, "Подробнее ›"); }
+function lineText(l) { return l[0] + " — " + l[1] + " " + l[2]; }
+function orderCard(o, opts) {
+  const V = (ST.view.roles || {})[ST.role] || ALLON, late = Math.max(0, diffDays(opts.day || TODAY, shipOn(o, opts.day || TODAY)));
+  const locked = lockedFor(o, o.stage);
+  const head = h("div", { class: "row sp" }, h("div", {}, h("div", { class: "num" }, "№ " + o.doc), h("div", { class: "mut" }, o.customer)),
+    h("div", { class: "row", style: "justify-content:flex-end;max-width:55%" }, h("span", { class: "mut" + (o.mgr === "move" || o.moved ? " hl" : "") }, "к " + fmtD(o.ship)), o.mgr === "move" ? h("span", { class: "pill bad" }, "ПЕРЕНОС") : null, o.mgr === "ok" ? h("span", { class: "pill ok" }, "ОК") : null,
+      late ? h("span", { class: "pill bad" }, "перенос +" + late + " дн.") : null, o.moved ? h("span", { class: "pill blue" }, "перенесён") : null,
+      o.hold ? h("span", { class: "pill warn" }, "допроверка") : null,
+      V.admit && isMgr() && o.admit !== "go" ? h("span", { class: "pill " + ADMIT[o.admit][1] }, ADMIT[o.admit][0]) : null,
+      V.cz && o.cz ? h("span", { class: "pill ok", title: "Честный знак" }, "ЧЗ ✓") : null,
+      V.base ? h("span", { class: "pill" }, o.base) : null));
+  const shown = o.lines.slice(0, opts.maxLines || 3);
+  const body = [head, ...(isMgr() ? [steps(o, opts.day)] : []), linesView(o, opts.maxLines || 6)];
+  if (V.deliv && o.deliv) body.push(h("div", { class: "mut" }, "Доставка: " + o.deliv + (o.addr && o.addr !== "—" ? " · " + o.addr : "")));
+  if (V.created && o.created) body.push(h("div", { class: "mut" }, "Создан: " + fmtD(o.created)));
+  if (V.fields && isMgr()) {
+    const vals = Object.entries(o.f).flatMap(([sc, fs]) => Object.entries(fs).map(([k, v]) => ((STAGES.find(s => s.code === sc).fields.find(x => x.code === k) || {}).title || k) + ": " + v));
+    if (vals.length) body.push(h("div", { class: "mut" }, vals.join(" · ")));
+  }
+  if (V.reqs && o.reqs) body.push(h("details", { class: "reqbox" }, h("summary", {}, "Требования клиента (" + o.reqs.length + ")"), h("ul", {}, o.reqs.map(r => h("li", {}, r)))));
+  if (o.resolution) body.push(h("div", { class: "pill ok", style: "align-self:flex-start;white-space:normal" }, "Решение менеджера: " + o.resolution));
+  { const gb = grainBlock(o); if (gb) body.push(gb); }
+  { const bb = boxesBadge(o); if (bb) body.push(bb); }
+  if (!opts.noDetail) body.push(detailBtn(o));
+  if (o.problem && !opts.noProb) body.push(h("div", { class: "pill bad", style: "align-self:flex-start" }, "Ждёт решения: " + o.problem.reason));
+  if (opts.extra) body.push(...opts.extra);
+  return h("div", { class: "ocard" + (o.hold ? " hold" : "") + (locked ? " lock" : "") }, body);
+}
+
+/* ============================================================ окна */
+function sheet(title, nodes, actions) {
+  const ov = h("div", { class: "ov", onclick: e => { if (e.target === ov) ov.remove(); } }, h("div", { class: "sheet" }, h("h2", {}, title), ...nodes, h("div", { class: "acts" }, ...actions(() => ov.remove()))));
+  document.getElementById("screen").append(ov);
+  return ov;
+}
+function markDone(o, extraF) {
+  const code = o.stage; o.lastBy = ST.role; o.lastFrom = code; o.taker = null; o.resolution = null; o.f[code] = { ...(o.f[code] || {}), ...(extraF || {}) };
+  const i = stageIdx(code); o.stage = i + 1 < STAGES.length ? STAGES[i + 1].code : "done"; (o.hist = o.hist || []).push([TODAY, o.stage]); if (o.stage === "done") o.done = TODAY;
+}
+const TOL_KG = 0;
+function unitKg(name) { let m, r = null; const re = /(\d+(?:[.,]\d+)?)\s*(кг|гр|г)(?![а-яa-zё])/gi; while ((m = re.exec(name))) { const n = parseFloat(m[1].replace(",", ".")); r = /^кг$/i.test(m[2]) ? n : n / 1000; } return r; }
+function wOf(n) { return ST.catalog[n] > 0 ? ST.catalog[n] : unitKg(n); }
+function missingWeights(o) { return [...new Set(o.lines.map(l => l[0]).filter(n => !(wOf(n) > 0)))]; }
+function planPcs(o) { return o.lines.reduce((a, l) => a + (+l[1] || 0), 0); }
+function planKg(o) { if (missingWeights(o).length) return null; let sum = 0; for (const l of o.lines) sum += wOf(l[0]) * (+l[1] || 0); return Math.round(sum * 1000) / 1000; }
+const fmtKg = n => String(Math.round(n * 100) / 100).replace(".", ",") + " кг";
+function doneSheet(o) {
+  const st = STAGES.find(s => s.code === o.stage);
+  const nxt = stageIdx(st.code) + 1 < STAGES.length ? STAGES[stageIdx(st.code) + 1].title : "Готово";
+  if (st.code === "ship") return shipSheet(o);
+  const docsChk = h("input", { type: "checkbox", checked: !!o.docs, style: "width:20px;height:20px;min-height:0;padding:0;flex:none" });
+  const ins = st.fields.map(f => ({ f, el: h("input", { type: "number", inputmode: "decimal", step: "any", min: "0", placeholder: "0", value: (o.f[st.code] || {})[f.code] || "" }) }));
+  sheet("№ " + o.doc + " · " + st.title, [h("div", { class: "mut" }, o.customer + " · " + o.lines.map(lineText).join("; ")), h("div", { class: "reqbox" }, "После подтверждения заказ уйдёт на этап «" + nxt + "». Проверьте цифры."), ...ins.flatMap(x => [h("label", {}, x.f.title), x.el]), ...(st.code === "pack" ? [h("label", { class: "row" }, docsChk, " Отгрузочные документы сделаны")] : []), h("label", {}, "Заметка (необязательно)"), h("textarea", { placeholder: "Если что-то не так — напишите" })],
+    close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => { const v = {}; ins.forEach(x => { if (x.el.value) v[x.f.code] = x.el.value; });
+      const plan = planPcs(o), fact = v.pcs != null ? parseFloat(String(v.pcs).replace(",", ".")) : null;
+      if (st.code === "pack" && fact != null && Math.abs(fact - plan) > TOL_KG + 1e-9) { close(); return diffSheet(o, v, plan, fact, nxt); }
+      if (st.code === "pack") o.docs = docsChk.checked;
+      o.diff = null; markDone(o, v); close(); say("Отмечено ✓"); } }, "Подтвердить и передать → " + nxt)]);
+}
+function admitSelect(o) { return h("select", { class: "sel", "aria-label": "Допуск", onchange: e => { o.admit = e.target.value; render(); } }, Object.entries(ADMIT).map(([k, v]) => h("option", { value: k, selected: o.admit === k }, v[0]))); }
+function moveSheet(o, after) {
+  const cur = o.ship; let val = cur;
+  const out = h("div", { class: "reqbox" }), inp = h("input", { type: "date", min: TODAY });
+  const draw = () => { inp.value = val; const d = diffDays(val, cur); out.replaceChildren(h("div", {}, "Сейчас: " + fmtD(cur) + "." + cur.slice(0, 4)), h("b", {}, "Новая дата: " + fmtD(val) + "." + val.slice(0, 4) + (d ? " (" + (d > 0 ? "+" : "") + d + " дн.)" : " (без изменений)"))); };
+  inp.addEventListener("change", () => { if (inp.value && inp.value >= TODAY) { val = inp.value; draw(); } });
+  const step = n => h("button", { class: "b s", onclick: () => { const nv = addDays(val, n); if (nv >= TODAY) { val = nv; draw(); } } }, (n > 0 ? "+" : "−") + Math.abs(n) + " дн.");
+  draw();
+  sheet("Перенос заказа № " + o.doc, [out, h("div", { class: "acts", style: "flex-wrap:wrap" }, step(-1), step(1), step(2), step(7)), h("label", {}, "Или выберите дату в календаре"), inp],
+    close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => { if (val !== cur) { o.ship0 = o.ship0 || cur; o.ship = val; o.moved = (o.moved || 0) + 1; } o.mgr = "move"; close(); if (after) after(); else say("Перенесено на " + fmtD(val)); } }, "Перенести")]);
+}
+function mgrRow(o) {
+  return h("div", { class: "stack" }, h("div", { class: "row" }, h("span", { class: "mut" }, "Допуск:"), admitSelect(o)),
+    h("div", { class: "row" }, h("span", { class: "mut" }, "Менеджер:"), h("button", { class: "b s" + (o.mgr === "ok" ? " on" : ""), onclick: () => { o.mgr = "ok"; render(); } }, "ОК"),
+      h("button", { class: "b s" + (o.mgr === "move" ? " on" : ""), onclick: () => moveSheet(o) }, o.mgr === "move" ? "Перенос: " + fmtD(o.ship) + " ✎" : "Перенос…"), h("button", { class: "b s", onclick: () => editSheet(o) }, "Изменить заказ")));
+}
+function editSheet(o) {
+  const draft = o.lines.map(l => [...l]);
+  const cust = h("input", { value: o.customer }), ship = h("input", { type: "date", value: o.ship });
+  const base = h("select", { class: "sel" }, ["Луна", "Троица"].map(b => h("option", { value: b, selected: o.base === b }, b)));
+  const deliv = h("select", { class: "sel" }, ["—", ...DELIVERY].map(d => h("option", { value: d, selected: (o.deliv || "—") === d }, d)));
+  const addr = h("input", { value: o.addr && o.addr !== "—" ? o.addr : "", placeholder: "Адрес доставки" });
+  const cz = h("input", { type: "checkbox", checked: !!o.cz, style: "width:20px;height:20px;min-height:0;padding:0;flex:none" });
+  const sostav = h("input", { value: o.sostav || "", placeholder: "например: 13 бр, 12 4гр" });
+  const reqs = h("textarea", { rows: "5", placeholder: "По одному требованию в строке" }); reqs.value = (o.reqs || []).join("\n");
+  const dl = h("datalist", { id: "catdl" }, Object.keys(ST.catalog).map(n => h("option", { value: n })));
+  const box = h("div", { class: "stack" });
+  const draw = () => box.replaceChildren(...draft.map((l, i) => h("div", { class: "erow" },
+    h("input", { list: "catdl", value: l[0], placeholder: "Товар", onchange: e => { l[0] = e.target.value.trim(); } }),
+    h("input", { type: "number", min: "0", step: "any", inputmode: "decimal", value: l[1], onchange: e => { l[1] = parseFloat(e.target.value) || 0; } }),
+    h("button", { class: "dots", "aria-label": "Убрать позицию", onclick: () => { draft.splice(i, 1); draw(); } }, "✕"))),
+    h("button", { class: "b s", onclick: () => { draft.push(["", 1, "шт"]); draw(); } }, "+ Добавить позицию"));
+  draw();
+  sheet("Изменить заказ № " + o.doc, [h("div", { class: "mut" }, "Исправьте то, что неверно перенеслось из 1С. Цех увидит уже исправленный заказ."), dl,
+    h("label", {}, "Клиент"), cust, h("label", {}, "Дата отгрузки"), ship, h("label", {}, "База"), base,
+    h("label", {}, "Способ доставки"), deliv, addr, h("label", { class: "row" }, cz, " Честный знак"),
+    h("label", {}, "Позиции: товар и количество"), box, h("label", {}, "Состав (ориентир для обжарки)"), sostav, h("label", {}, "Требования клиента"), reqs],
+    close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => {
+      const lines = draft.filter(l => l[0] && l[1] > 0);
+      if (!cust.value.trim() || !lines.length) { say("Нужны клиент и хотя бы одна позиция"); return; }
+      const changed = JSON.stringify(lines) !== JSON.stringify(o.lines);
+      if (ship.value && ship.value !== o.ship) { o.ship0 = o.ship0 || o.ship; o.ship = ship.value; }
+      o.customer = cust.value.trim(); o.base = base.value; o.deliv = deliv.value === "—" ? "" : deliv.value; o.addr = addr.value.trim() || "—"; o.cz = cz.checked; o.sostav = sostav.value.trim();
+      const rq = reqs.value.split("\n").map(x => x.trim()).filter(Boolean); o.reqs = rq.length ? rq : null;
+      if (changed) { o.lines = lines; o.pk = {}; o.kgManual = false; o.packsManual = false; }
+      o.edited = roleName(ST.role) + ", " + fmtD(TODAY);
+      close(); say("Заказ исправлен"); } }, "Сохранить")]);
+}
+function rollbackSheet(o, to) {
+  sheet("Откатить заказ № " + o.doc, [h("div", {}, "Заказ вернётся с этапа «" + stageTitle(o.stage) + "» на этап «" + stageTitle(to) + "». Используйте, если статус отметили случайно.")],
+    close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => { o.stage = to; o.done = null; o.taker = roleOfStage(to) === ST.role ? ST.role : null; o.lastBy = null; (o.hist = o.hist || []).push([TODAY, to]); close(); say("Откатили на этап «" + stageTitle(to) + "»"); } }, "Откатить")]);
+}
+function weightSheet(name, after) {
+  const inp = h("input", { type: "number", inputmode: "decimal", step: "any", min: "0", placeholder: "например 0,25", value: wOf(name) || "" });
+  sheet("Вес товара", [h("div", {}, name), h("label", {}, "Вес одной штуки (одного пакета или мешка), кг"), inp],
+    close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => { const v = parseFloat(String(inp.value).replace(",", ".")); if (!(v > 0)) { say("Введите вес больше нуля"); return; } ST.catalog[name] = v; close(); if (after) after(); else say("Вес сохранён"); } }, "Сохранить")]);
+}
+function missingSheet(o, v, nxt) {
+  const miss = missingWeights(o);
+  sheet("Нет веса у товара", [h("div", { class: "reqbox" }, "У этих товаров не задан вес, поэтому проверить сборку нельзя: " + miss.join("; ")), h("div", {}, "Вес задаёт менеджер по продажам. Можно передать без проверки или спросить менеджера.")],
+    close => [h("div", { class: "stack", style: "width:100%" },
+      h("button", { class: "b g", onclick: () => { close(); askSheet(o, { reason: "Нет веса у товара", missing: miss, text: "Не задан вес: " + miss.join("; ") }); } }, "Спросить менеджера"),
+      h("button", { class: "b", onclick: () => { markDone(o, v); close(); say("Передано без проверки веса"); } }, "Передать без проверки"),
+      h("button", { class: "b", onclick: close }, "Отмена"))]);
+}
+function diffSheet(o, v, plan, fact, nxt) {
+  const d = Math.round((fact - plan) * 100) / 100;
+  sheet("Количество не сходится", [h("div", { class: "reqbox" }, h("div", {}, "По заказу: " + plan + " шт"), h("div", {}, "Вы ввели: " + fact + " шт"), h("b", {}, (d > 0 ? "Лишнее: +" : "Не хватает: ") + Math.abs(d) + " шт")), h("div", {}, "Передать на «" + nxt + "» с этой разницей или сообщить менеджеру о проблеме?")],
+    close => [h("div", { class: "stack", style: "width:100%" },
+      h("button", { class: "b g", onclick: () => { o.diff = d; markDone(o, v); close(); say("Передано с разницей " + (d > 0 ? "+" : "−") + Math.abs(d) + " шт"); } }, "Передать как есть"),
+      h("button", { class: "b", onclick: () => { close(); askSheet(o, { reason: "Частичная отгрузка", text: "Собрано " + fact + " шт" + " из " + plan + " шт" }); } }, "Сообщить о проблеме"),
+      h("button", { class: "b", onclick: () => { close(); doneSheet(o); } }, "Исправить цифры"))]);
+}
+function sheetConfirm(o) { doneSheet(o); }
+function shipSheet(o) {
+  let mode2 = "full"; const inputs = o.lines.map(l => h("input", { type: "number", inputmode: "numeric", min: "0", max: String(l[1]), value: String(l[1]) }));
+  const wrap = h("div", {}); const reason = h("textarea", { placeholder: "Причина (если не уехал)" });
+  const draw = () => {
+    wrap.replaceChildren(...[["full", "Уехал"], ["no", "Не уехал"]].map(([k, t]) => h("div", { class: "opt" + (mode2 === k ? " on" : ""), onclick: () => { mode2 = k; draw(); } }, t)),
+      ...(mode2 === "part" ? [h("div", {}, h("div", { class: "mut", style: "margin:6px 0" }, "Сколько реально уехало по каждой позиции. Остаток станет отдельным заказом «недовоз»."), ...o.lines.flatMap((l, i) => [h("label", {}, l[0] + " (заказано " + l[1] + ")"), inputs[i]]))] : []));
+  };
+  draw();
+  sheet("№ " + o.doc + " · Отгрузка", [wrap, h("label", {}, "Паллет / комментарий"), reason],
+    close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => {
+      if (mode2 === "no") { o.hold = true; o.problem = { reason: "Не уехал", text: reason.value || "причина не указана", from: "ship", by: roleName(ST.role) }; close(); say("Менеджеру отправлена проблема"); return; }
+      if (mode2 === "part") {
+        const rest = o.lines.map((l, i) => [l[0], Math.max(0, l[1] - Math.min(l[1], +inputs[i].value || 0)), l[2]]).filter(l => l[1] > 0);
+        if (rest.length) {
+          ST.orders.push({ ...clone(o), id: "o" + Date.now(), doc: o.doc + "-Н", customer: o.customer + " (недовоз)", lines: rest, stage: "pack", f: {}, ship: addDays(TODAY, 2), created: TODAY, hist: [], done: null, hold: false, moved: 0, admit: "go" });
+          o.lines = o.lines.map((l, i) => [l[0], Math.min(l[1], +inputs[i].value || 0), l[2]]).filter(l => l[1] > 0);
+        }
+      }
+      markDone(o); close(); say(mode2 === "part" ? "Отгружено, недовоз создан отдельным заказом" : "Отгружено ✓");
+    } }, "Подтвердить")]);
+}
+function shiftSheet() {
+  const ins = GRAINS.map(g => h("input", { type: "number", inputmode: "numeric", min: "0", placeholder: "мешков", "aria-label": g }));
+  const total = h("div", { class: "reqbox" }, "Итого: 0 кг");
+  ins.forEach(i => i.addEventListener("input", () => { total.textContent = "Итого: " + ins.reduce((a, x) => a + (+x.value || 0) * 20, 0) + " кг"; }));
+  sheet("Завершить смену", [h("div", { class: "mut" }, "Сколько осталось зерна на вечер. Считаем мешки: в одном примерно 20 кг, цифра приблизительная."), ...GRAINS.flatMap((g, i) => [h("label", {}, g + ", мешков"), ins[i]]), total],
+    close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => { ST.grain.unshift({ day: TODAY, who: roleName(ST.role), rows: GRAINS.map((g, i) => [g, +ins[i].value || 0]) }); close(); say("Смена завершена, остаток зерна записан"); } }, "Завершить смену")]);
+}
+const REASONS_BY = { label: ["Нет наклеек", "Не хватает позиции"], pack: ["Нет зерна", "Не хватает пакетов", "Не хватает позиции", "Замена документов"], ship: ["Не хватает позиции", "Другое"] };
+function askSheet(o, preset) {
+  const R0 = REASONS_BY[o.stage] || REASONS_BY.pack; const reasons = preset && preset.reason && !R0.includes(preset.reason) ? [preset.reason, ...R0] : R0;
+  const reason = h("select", {}, reasons.map(t => h("option", { selected: preset && preset.reason === t }, t)));
+  const sel = new Set((preset && preset.lines) || []);
+  const lineBox = h("div", { class: "plist" }, o.lines.map((l, i) => h("label", { class: "pl", style: "grid-template-columns:20px 1fr;cursor:pointer" },
+    h("input", { type: "checkbox", checked: sel.has(i), onchange: e => { e.target.checked ? sel.add(i) : sel.delete(i); } }), h("div", { class: "pn" }, l[0] + " — " + l[1] + " " + l[2]))));
+  const text = h("textarea", { placeholder: "Что случилось, сколько не хватает" }); if (preset && preset.text) text.value = preset.text;
+  let photo = null; const prev = h("div", { class: "mut" }, "Фото не прикреплено");
+  const file = h("input", { type: "file", accept: "image/*", onchange: e => { const f = e.target.files[0]; if (f) { photo = URL.createObjectURL(f); prev.replaceChildren(h("img", { src: photo, alt: "Фото заказа", style: "max-width:100%;max-height:120px;border-radius:10px" })); } } });
+  sheet("Проблема по заказу № " + o.doc, [h("div", { class: "mut" }, "Заказ уйдёт менеджеру и директору, а у вас пропадёт из списка, пока они не решат. Это заменяет сообщение в общий чат."), h("label", {}, "Причина"), reason, h("label", {}, "По каким позициям (можно несколько)"), lineBox, h("div", { class: "mut" }, "Ничего не отмечено: проблема по всему заказу."), h("label", {}, "Комментарий"), text, h("label", {}, "Фото заказа (необязательно)"), file, prev],
+    close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => { if (reason.value === "Нет зерна") { o.grainWait = { by: roleName(ST.role), text: text.value, lines: [...sel].sort((a, b) => a - b), photo, date: TODAY }; ST.open = null; close(); say("Отмечено: ждём зерно. Заказ остаётся у вас, директор и менеджер видят пометку"); return; } o.hold = true; o.taker = null; o.resolution = null; o.problem = { reason: reason.value, lines: [...sel].sort((a, b) => a - b), text: text.value, photo, missing: preset && preset.missing, from: o.stage, by: roleName(ST.role) }; close(); say("Заказ ушёл менеджеру и директору"); } }, "Отправить менеджеру")]);
+}
+
+/* ============================================================ экраны */
+function dayNav(body, title) {
+  const D = ST.day, past = D < TODAY;
+  body.append(h("div", { class: "ph2" }, title),
+    h("div", { class: "daynav" }, h("button", { class: "b", "aria-label": "Предыдущий день", onclick: () => { ST.day = addDays(D, -1); render(); } }, "‹"),
+      h("div", { class: "cur" }, fmtD(D) + "." + D.slice(0, 4) + (D === TODAY ? " · сегодня" : "")),
+      h("button", { class: "b", "aria-label": "Следующий день", onclick: () => { ST.day = addDays(D, 1); render(); } }, "›"),
+      past || D > TODAY ? h("button", { class: "b s", onclick: () => { ST.day = TODAY; render(); } }, "Сегодня") : null),
+    ...(past ? [h("div", { class: "reqbox", style: "margin-bottom:8px" }, "Архив: так выглядел цех в этот день. Менять ничего нельзя.")] : []));
+  return past;
+}
+const PICK_STAGES = ["label", "pack"];
+const SHORT_WHY = { label: ["Нет наклеек", "Не хватило пачек", "Брак", "Другое"], pack: ["Не хватило зерна", "Не хватило пакетов", "Брак", "Другое"] };
+function PK(o) { o.pk = o.pk || {}; return (o.pk[o.stage] = o.pk[o.stage] || {}); }
+function pk(o, i) { const P = PK(o); return (P[i] = P[i] || { ok: false, qty: null, kg: null, why: null }); }
+function pkGet(o, i) { return (PK(o))[i] || { ok: false, qty: null, kg: null, why: null }; }
+function qtyOf(o, i) { const p = pkGet(o, i); return p.qty != null ? p.qty : o.lines[i][1]; }
+function lineKg(o, i) { const p = pkGet(o, i), w = wOf(o.lines[i][0]); if (p.kg != null) return p.kg; return w ? Math.round(qtyOf(o, i) * w * 1000) / 1000 : null; }
+function collectedKg(o) { let sum = 0; for (let i = 0; i < o.lines.length; i++) { if (!pkGet(o, i).ok) continue; const k = lineKg(o, i); if (k == null) return null; sum += k; } return Math.round(sum * 1000) / 1000; }
+function recalcTotals(o) {
+  if (o.stage === "pack" && !o.kgManual) { let n = 0; o.lines.forEach((l, i) => { if (pkGet(o, i).ok) n += qtyOf(o, i); }); o.f.pack = { ...(o.f.pack || {}), pcs: String(n) }; }
+  if (o.stage === "label" && !o.packsManual) { let n = 0; o.lines.forEach((l, i) => { if (pkGet(o, i).ok) n += qtyOf(o, i); }); o.f.label = { ...(o.f.label || {}), packs: String(n) }; }
+}
+const recalcKg = recalcTotals;
+function shortagesOf(o) { return o.lines.map((l, i) => ({ i, name: l[0], unit: l[2], short: Math.max(0, l[1] - (pkGet(o, i).ok ? qtyOf(o, i) : l[1])), why: pkGet(o, i).why || "" })).filter(x => x.short > 0); }
+function shortText(x) { return x.name + " — " + x.short + " " + x.unit + (x.why ? " (" + x.why + ")" : ""); }
+function lineSheet(o, i) {
+  const l = o.lines[i], p = pkGet(o, i), st = o.stage, plan = wOf(l[0]) ? Math.round(l[1] * wOf(l[0]) * 1000) / 1000 : null;
+  const kgIn = h("input", { type: "number", inputmode: "decimal", step: "any", min: "0", placeholder: plan != null ? "по плану " + plan : "кг", value: p.kg != null ? p.kg : "" });
+  const shIn = h("input", { type: "number", inputmode: "numeric", min: "0", max: String(l[1]), placeholder: "0", value: p.qty != null && p.qty < l[1] ? l[1] - p.qty : "" });
+  const why = h("select", { class: "sel" }, SHORT_WHY[st].map(w => h("option", { value: w, selected: p.why === w }, w)));
+  const nodes = [h("div", { class: "mut" }, l[0] + " · заказано " + l[1] + " " + l[2])];
+  if (st === "pack") nodes.push(h("label", {}, "Вес не соответствует: сколько кг на самом деле"), kgIn);
+  nodes.push(h("label", {}, "Не хватило: сколько " + l[2]), shIn, h("label", {}, "Причина"), why);
+  sheet("Позиция: отметка", nodes, close => [
+    h("button", { class: "b", onclick: () => { delete PK(o)[i]; recalcTotals(o); close(); render(); } }, "Сбросить"),
+    h("button", { class: "b g", onclick: () => {
+      const pp = pk(o, i), sv = parseFloat(String(shIn.value).replace(",", ".")), kv = parseFloat(String(kgIn.value).replace(",", "."));
+      pp.ok = true; pp.qty = sv > 0 ? Math.max(0, l[1] - Math.min(sv, l[1])) : l[1]; pp.why = sv > 0 ? why.value : null; pp.kg = st === "pack" && kv >= 0 && String(kgIn.value) !== "" ? kv : null;
+      recalcTotals(o); close(); render(); } }, "Сохранить")]);
+}
+function shortSheet(o) {
+  const sh = shortagesOf(o); let photo = null; const prev = h("div", { class: "mut" }, "Фото не прикреплено");
+  const file = h("input", { type: "file", accept: "image/*", onchange: e => { const f = e.target.files[0]; if (f) { photo = URL.createObjectURL(f); prev.replaceChildren(h("img", { src: photo, alt: "Фото заказа", style: "max-width:100%;max-height:120px;border-radius:10px" })); } } });
+  sheet("Не хватило позиций", [h("div", { class: "reqbox" }, sh.map(x => h("div", {}, shortText(x)))), h("div", {}, "Менеджер решит, что делать: отгрузить то, что есть, а остаток в недовоз, или ждать. Пока он не решит, заказ у вас пропадёт из списка."), h("label", {}, "Фото заказа (необязательно)"), file, prev],
+    close => [h("button", { class: "b", onclick: close }, "Назад"), h("button", { class: "b g", onclick: () => { o.hold = true; o.taker = null; o.resolution = null; o.problem = { reason: "Частичная отгрузка", line: "", text: "Не хватило: " + sh.map(shortText).join("; "), from: o.stage, by: roleName(ST.role), shortLines: sh, photo }; ST.open = null; close(); say("Заказ ушёл менеджеру и директору"); } }, "Отправить менеджеру")]);
+}
+function okLine(o, i, v) { const pp = pk(o, i); pp.ok = v; recalcTotals(o); }
+
+const VIEWS_ORDER = function (body) {
+    const o = ST.orders.find(x => x.id === ST.open), st = STAGES.find(x => x.code === o.stage), isPack = o.stage === "pack";
+    body.append(h("button", { class: "b s", style: "align-self:flex-start;margin-bottom:8px", onclick: () => { ST.open = null; render(); } }, "‹ Назад к заказам"));
+    body.append(h("div", { class: "ph2" }, st.title + " № " + o.doc), h("div", { class: "mut" }, o.customer + " · к " + fmtD(o.ship) + " · " + o.base));
+    if (o.reqs) body.append(h("details", { class: "reqbox" }, h("summary", {}, "Требования клиента (" + o.reqs.length + ")"), h("ul", {}, o.reqs.map(r => h("li", {}, r)))));
+    const wreq = isPack && o.reqs ? o.reqs.filter(r => /вес пачки|пакет|короб|палл/i.test(r)) : [];
+    if (wreq.length) body.append(h("div", { class: "reqbox" }, h("b", {}, "Из листа заказа"), wreq.map(r => h("div", {}, "• " + r))));
+    const IX = idxs(o), ticked = IX.filter(i => pkGet(o, i).ok).length;
+    body.append(h("div", { class: "blk pack" }, h("span", {}, "Позиции заказа"), h("i", {}, ticked + " / " + IX.length)));
+    if (o.stage === "label" && IX.length < o.lines.length) body.append(h("div", { class: "mut" }, "Мешки в крафте не клеим, их тут нет."));
+    if (ticked < IX.length) body.append(h("button", { class: "b", style: "align-self:flex-start;margin-bottom:8px", onclick: () => { IX.forEach(i => { if (!pkGet(o, i).ok) okLine(o, i, true); }); render(); } }, "Отметить все позиции: всё готово"));
+    body.append(h("div", { class: "plist" }, IX.map(i => {
+      const l = o.lines[i], p = pkGet(o, i), q = qtyOf(o, i), sh = p.ok ? Math.max(0, l[1] - q) : 0, k = lineKg(o, i);
+      const val = q + " " + l[2];
+      const note = sh ? "не хватило " + sh + " " + l[2] + (p.why ? " · " + p.why : "") : (isPack && p.kg != null ? "вес вручную: " + fmtKg(p.kg) : "");
+      return h("div", { class: "pl" + (p.ok ? " pok" : "") + (sh || p.kg != null ? " pbad" : "") },
+        h("input", { type: "checkbox", checked: !!p.ok, "aria-label": "Готово: " + l[0], onchange: e => { okLine(o, i, e.target.checked); setTimeout(render, 0); } }),
+        h("div", { class: "pn" }, h("div", {}, l[0]), !note && isPack && k != null ? h("small", { style: "color:#8a7d6b" }, "≈ " + fmtKg(k)) : null, note ? h("small", {}, note) : null),
+        h("b", { class: "pv" }, val),
+        h("button", { class: "dots", "aria-label": "Ещё", onclick: () => lineSheet(o, i) }, "⋯"));
+    })));
+    const f = o.f[o.stage] || {}, plan = planKg(o), calc = collectedKg(o);
+    const cells = isPack
+      ? [h("div", {}, h("label", { class: "mut" }, "Коробок"), h("input", { class: "inl", type: "number", inputmode: "numeric", min: "0", value: f.boxes || "", placeholder: "0", onchange: e => { o.f.pack = { ...(o.f.pack || {}), boxes: e.target.value }; } })),
+         h("div", {}, h("label", { class: "mut" }, "Фактически собрано, шт"), h("input", { class: "inl", type: "number", inputmode: "numeric", min: "0", value: f.pcs || "", placeholder: "0", onchange: e => { o.kgManual = true; o.f.pack = { ...(o.f.pack || {}), pcs: e.target.value }; setTimeout(render, 0); } }))]
+      : [h("div", {}, h("label", { class: "mut" }, "Пачек расклеено"), h("input", { class: "inl", type: "number", inputmode: "numeric", min: "0", value: f.packs || "", placeholder: "0", onchange: e => { o.packsManual = true; o.f.label = { ...(o.f.label || {}), packs: e.target.value }; } }))];
+    body.append(h("div", { class: "ph3" }, "Итого"), h("div", { class: "ocard" }, h("div", { class: "cells2" }, cells),
+      isPack ? h("div", { class: "mut" }, "По заказу: " + planPcs(o) + " шт" + (plan != null ? " (≈ " + fmtKg(plan) + ")" : "") + (calc != null ? " · отмечено ≈ " + fmtKg(calc) : "")) : null));
+    const sh = shortagesOf(o), all = ticked === IX.length;
+    body.append(h("div", { class: "stack", style: "margin-top:12px" },
+      h("button", { class: "b g", disabled: !all, onclick: () => (sh.length ? shortSheet(o) : doneSheet(o)) }, !all ? "Отметьте все позиции" : sh.length ? "Передать с недовозом…" : "Передать дальше →"),
+      h("button", { class: "b", onclick: () => askSheet(o) }, "Проблема по заказу")));
+};
+const VIEWS_DETAIL = function (body) {
+  const o = ST.orders.find(x => x.id === ST.detail), st = stageOn(o, TODAY), tot = planKg(o);
+  body.append(h("button", { class: "b s", style: "align-self:flex-start;margin-bottom:8px", onclick: () => { ST.detail = null; render(); } }, "‹ Назад"));
+  body.append(h("div", { class: "ph2" }, "Заказ № " + o.doc), h("div", { class: "mut" }, o.customer + " · этап «" + stageTitle(st) + "»" + (o.taker ? " · в работе: " + roleName(o.taker) : "")));
+  if (o.edited) body.append(h("div", { class: "pill blue", style: "align-self:flex-start" }, "Исправлен: " + o.edited));
+  if (o.resolution) body.append(h("div", { class: "pill ok", style: "align-self:flex-start;white-space:normal" }, "Решение менеджера: " + o.resolution));
+  if (o.problem) body.append(h("div", { class: "pill bad", style: "align-self:flex-start;white-space:normal" }, o.problem.reason + (o.problem.text ? ": " + o.problem.text : "")));
+  body.append(h("div", { class: "blk pack" }, h("span", {}, "Позиции"), h("i", {}, o.lines.length)), h("div", { class: "ocard" }, linesView(o), h("div", { class: "mut" }, "Итого по заказу: " + planPcs(o) + " шт" + (tot != null ? " (≈ " + fmtKg(tot) + ")" : "") + (o.diff ? " · собрано с разницей " + (o.diff > 0 ? "+" : "−") + Math.abs(o.diff) + " шт" : ""))));
+  const rows = [["Отгрузка", fmtD(o.ship) + (o.ship0 ? " (было " + fmtD(o.ship0) + ")" : "")], ["База", o.base], ["Доставка", (o.deliv || "—") + (o.addr && o.addr !== "—" ? " · " + o.addr : "")], ["Создан", o.created ? fmtD(o.created) : "—"], ["Честный знак", o.cz ? "да" : "нет"], ["Отгрузочные документы", o.docs ? "сделаны" : "не отмечены"]];
+  if (isMgr()) rows.push(["Допуск", ADMIT[o.admit][0]]);
+  body.append(h("div", { class: "ph3" }, "Сведения"), h("div", { class: "ocard" }, rows.map(r => h("div", { class: "row sp", style: "gap:12px;flex-wrap:nowrap;align-items:baseline" }, h("span", { class: "mut" }, r[0]), h("b", { style: "text-align:right;font-weight:600" }, r[1])))));
+  body.append(h("div", { class: "ph3" }, "Состав и объём по сортам"), h("div", { class: "ocard" },
+    h("div", { class: "row sp", style: "gap:12px;flex-wrap:nowrap;align-items:baseline" }, h("span", { class: "mut" }, "Состав (как в таблице)"), h("b", { style: "text-align:right;font-weight:600" }, o.sostav || "—")),
+    h("div", { class: "lt" }, sortVolumes(o).map(([n, e]) => h("div", { class: "lr" }, h("span", { class: "ln" }, n), h("span", { class: "lq" }, e.pcs + " шт"), h("span", { class: "lw" }, e.unknown ? "вес не задан" : fmtKg(e.kg)))))));
+  const vals = Object.entries(o.f).flatMap(([sc, fs]) => Object.entries(fs).map(([k, v]) => ((STAGES.find(x => x.code === sc) || { fields: [] }).fields.find(x => x.code === k) || {}).title + ": " + v)).filter(x => !x.startsWith("undefined"));
+  if (vals.length) body.append(h("div", { class: "ph3" }, "Внесено цехом"), h("div", { class: "ocard" }, vals.map(v => h("div", {}, v))));
+  body.append(h("div", { class: "ph3" }, "Требования клиента"), o.reqs ? h("div", { class: "ocard" }, h("ul", { class: "lines" }, o.reqs.map(r => h("li", {}, r)))) : h("div", { class: "mut" }, "Нет"));
+  if (o.note) body.append(h("div", { class: "ph3" }, "Заметка цеха"), h("div", { class: "ocard" }, o.note));
+  if ((o.hist || []).length) body.append(h("div", { class: "ph3" }, "История"), h("div", { class: "ocard" }, o.hist.map(e => h("div", { class: "mut" }, fmtD(e[0]) + " — " + (e[1] === "done" ? "Готово" : stageTitle(e[1]))))));
+  if (isMgr()) body.append(h("div", { class: "stack", style: "margin-top:10px" }, h("button", { class: "b g", onclick: () => editSheet(o) }, "Изменить заказ")));
+};
+const VIEWS = {
+  order: VIEWS_ORDER,
+  cat(body) {
+    const F = ST.cfilter || "all", Q = (ST.cq || "").toLowerCase();
+    const all = Object.keys(ST.catalog);
+    const miss = all.filter(n => !(wOf(n) > 0));
+    body.append(h("div", { class: "ph2" }, "Товары"), h("div", { class: "mut" }, "Вес одной штуки (пакета или мешка) задаётся здесь. По нему считается плановый вес заказа."));
+    const q = h("input", { class: "inl", type: "search", placeholder: "Поиск товара", oninput: e => { ST.cq = e.target.value; clearTimeout(ST.qt); ST.qt = setTimeout(() => { render(); const i = document.querySelector("#screen input.inl"); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); } }); q.value = ST.cq || "";
+    body.append(q, h("div", { class: "chips" }, [["all", "Все (" + all.length + ")"], ["miss", "Без веса (" + miss.length + ")"]].map(([k, t]) => h("button", { class: "chip" + (F === k ? " on" : ""), onclick: () => { ST.cfilter = k; render(); } }, t))));
+    const list = all.filter(n => (F === "all" || !(wOf(n) > 0)) && (!Q || n.toLowerCase().includes(Q)));
+    if (!list.length) body.append(h("div", { class: "empty" }, "Ничего не найдено"));
+    list.forEach(n => body.append(h("div", { class: "ocard" + (wOf(n) > 0 ? "" : " hold") }, h("div", { class: "row sp" }, h("b", {}, n), wOf(n) > 0 ? null : h("span", { class: "pill warn" }, "вес не задан")),
+      h("label", { class: "mut" }, "Вес одной штуки, кг"), h("input", { class: "inl", type: "number", inputmode: "decimal", step: "any", min: "0", value: wOf(n) || "", placeholder: "не задан", onchange: e => { const v = parseFloat(String(e.target.value).replace(",", ".")); ST.catalog[n] = v > 0 ? v : null; render(); } }))));
+  },
+  new(body) {
+    const list = ST.orders.filter(o => o.stage === "new").sort((a, b) => a.ship.localeCompare(b.ship));
+    body.append(h("div", { class: "ph2" }, "Новые заказы"), h("div", { class: "mut" }, "Заказы из 1С, которые ещё не переданы в цех. Проверьте и передайте в работу."),
+      h("div", { class: "acts", style: "margin:10px 0 4px" }, h("button", { class: "b", onclick: () => { const n = loadFrom1C(); say("Загружено из 1С: " + n + " новых заказа"); } }, "⬇ Загрузить из 1С")),
+      ST.last1c ? h("div", { class: "mut" }, "Последняя загрузка в " + ST.last1c) : h("div", { class: "mut" }, "Загрузка по кнопке, чтобы не опрашивать 1С каждые 5 минут."));
+    if (!list.length) { body.append(h("div", { class: "empty" }, "Новых заказов нет", h("br"), "Нажмите «Загрузить из 1С»")); return; }
+    if (list.length > 1) body.append(h("div", { class: "acts", style: "margin:8px 0" }, h("button", { class: "b g", onclick: () => sheet("Передать все в работу", [h("div", {}, "Будет передано заказов: " + list.length + ". Допуск «Не грузим» остаётся у тех, где вы его поставили.")], close => [h("button", { class: "b", onclick: close }, "Отмена"), h("button", { class: "b g", onclick: () => { list.forEach(toWork); close(); say("Передано в работу: " + list.length); } }, "Передать все")]) }, "Передать все в работу (" + list.length + ")")));
+    list.forEach(o => body.append(orderCard(o, { day: TODAY, maxLines: 5, extra: [...missingWeights(o).map(n => h("div", { class: "row" }, h("span", { class: "pill warn" }, "Нет веса: " + n), h("button", { class: "b s", onclick: () => weightSheet(n) }, "Задать вес"))), mgrRow(o),
+      h("div", { class: "acts" }, h("button", { class: "b g", onclick: () => { toWork(o); say("№ " + o.doc + " передан в работу"); } }, "Передать в работу"))] })));
+  },
+  prob(body) {
+    const list = ST.orders.filter(o => o.stage !== "done" && o.stage !== "new" && problemsOf(o).length);
+    body.append(h("div", { class: "ph2" }, "Проблемные заказы"), h("div", { class: "mut" }, "То, что раньше уходило в чат с менеджерами: не хватает позиции или пакетов, недовоз, замена документов, неоплата, неоплата."));
+    { const gw = ST.orders.filter(o => o.grainWait && o.stage !== "done"); if (gw.length) { body.append(h("div", { class: "blk label" }, h("span", {}, "Ждут зерно"), h("i", {}, gw.length)), h("div", { class: "mut" }, "Это не проблема, решать ничего не нужно: заказ остаётся в цехе, пока не появится зерно.")); gw.forEach(o => body.append(orderCard(o, { day: TODAY, maxLines: 3 }))); } }
+    if (!list.length) { body.append(h("div", { class: "empty" }, "Проблемных заказов нет")); return; }
+    const resolve = (o, text) => { o.problem = null; o.hold = false; o.resolution = text; say("Решение отправлено в цех"); };
+    list.forEach(o => {
+      const pr = o.problem, acts = [], extraNodes = [];
+      if (pr) {
+        const lis = (pr.lines || []).filter(i => o.lines[i]);
+        if (pr.missing && pr.missing.length) {
+          const ins = pr.missing.map(n => ({ n, el: h("input", { class: "inl", type: "number", inputmode: "decimal", step: "any", min: "0", placeholder: "вес 1 шт, кг", value: wOf(n) || "" }) }));
+          extraNodes.push(h("div", { class: "reqbox" }, h("b", {}, "Задайте вес товаров"), ...ins.flatMap(x => [h("div", { class: "mut", style: "margin-top:6px" }, x.n), x.el])));
+          acts.push(h("button", { class: "b g", onclick: () => { for (const x of ins) { const v = parseFloat(String(x.el.value).replace(",", ".")); if (!(v > 0)) { say("Заполните вес всех товаров"); return; } } ins.forEach(x => { ST.catalog[x.n] = parseFloat(String(x.el.value).replace(",", ".")); }); resolve(o, "Вес товара задан, можно проверять сборку"); } }, "Сохранить вес и вернуть в работу"));
+        }
+        if (pr.shortLines && pr.shortLines.length) {
+          acts.push(h("button", { class: "b g", onclick: () => {
+            const dn = ST.orders.length; const sl = pr.shortLines;
+            ST.orders.push({ ...clone(o), id: "o" + Date.now(), doc: o.doc + "-Н", customer: o.customer + " (недовоз)", lines: sl.map(x => [x.name, x.short, x.unit]), stage: "new", f: {}, pk: {}, kgManual: false, packsManual: false, ship: addDays(TODAY, 2), created: TODAY, hist: [], done: null, hold: false, problem: null, resolution: null, taker: null, moved: 0, admit: "go", mgr: null });
+            sl.forEach(x => { const l = o.lines[x.i]; l[1] = l[1] - x.short; });
+            const keep = []; const np = {}; const stg = pr.from; o.lines.forEach((l, i) => { if (l[1] > 0) { np[keep.length] = { ok: true, qty: l[1], kg: null, why: null }; keep.push(l); } }); o.lines = keep; o.pk = { ...(o.pk || {}), [stg]: np }; o.kgManual = false; o.packsManual = false; recalcTotals(o);
+            resolve(o, "Отгружаем собранное, недостающее ушло в недовоз " + o.doc + "-Н"); } }, "Отгрузить что есть, остаток → недовоз"));
+        }
+        const back = pr.reason === "Нет зерна" ? "Зерно появилось: вернуть в работу" : "Решено: вернуть в работу";
+        if (!pr.waiting) acts.push(h("button", { class: "b g", onclick: () => { pr.waiting = true; say("Ждём: заказ остаётся у вас и директора"); } }, "Ждём, заказ остаётся у нас"));
+        acts.push(h("button", { class: pr.waiting ? "b g" : "b", onclick: () => resolve(o, pr.reason === "Нет зерна" ? "Зерно появилось, можно собирать" : "Вопрос решён, продолжайте") }, back));
+        acts.push(h("button", { class: "b", onclick: () => resolve(o, "Документы заменены: везём то, что собрано") }, "Заменить документы"));
+        if (lis.length && o.lines.length > lis.length) acts.push(h("button", { class: "b", onclick: () => { const miss = lis.map(i => clone(o.lines[i])); ST.orders.push({ ...clone(o), id: "o" + Date.now(), doc: o.doc + "-Н", customer: o.customer + " (недовоз)", lines: miss, stage: "new", f: {}, ship: addDays(TODAY, 2), created: TODAY, hist: [], done: null, hold: false, problem: null, resolution: null, taker: null, moved: 0, admit: "go" }); [...lis].sort((a, b) => b - a).forEach(i => o.lines.splice(i, 1)); o.pk = {}; resolve(o, "Отгружаем без позиций: " + miss.map(m => m[0]).join(", ") + ". Они пошли в недовоз"); } }, lis.length > 1 ? "Отгрузить без этих позиций → недовоз" : "Отгрузить без позиции → недовоз"));
+        acts.push(h("button", { class: "b s", onclick: () => moveSheet(o, () => resolve(o, "Перенесён на " + fmtD(o.ship))) }, "Перенести…"));
+      }
+      if (o.admit === "stop") acts.push(h("button", { class: "b", onclick: () => { o.admit = "go"; say("Допуск: Грузим"); } }, "Разрешить погрузку"));
+      body.append(orderCard(o, { day: TODAY, noProb: true, extra: [...problemsOf(o).map(([k, t]) => h("div", { class: "pill " + k, style: "align-self:flex-start" }, t)),
+        pr ? h("div", { class: "reqbox" }, pr.waiting ? h("div", { class: "pill warn", style: "display:block;width:fit-content;margin-bottom:6px" }, "Ждём: у цеха этого заказа нет") : null, h("b", {}, pr.by + " · этап «" + stageTitle(pr.from) + "»"), (pr.lines || []).filter(i => o.lines[i]).length ? h("div", {}, "Позиции: " + pr.lines.filter(i => o.lines[i]).map(i => o.lines[i][0]).join("; ")) : null, pr.text ? h("div", {}, pr.text) : null, pr.photo ? h("img", { src: pr.photo, alt: "Фото", style: "max-width:100%;max-height:140px;border-radius:10px;margin-top:6px" }) : null) : null,
+        ...extraNodes, mgrRow(o), h("div", { class: "stack" }, ...acts)] }));
+    });
+  },
+  list(body) {
+    const D = ST.day, past = dayNav(body, "Лист цеха");
+    if (false) { const G = ST.grain; body.append(h("div", { class: "blk done" }, h("span", {}, "Остаток зерна на конец смены"), h("i", {}, G.length ? fmtD(G[0].day) : "нет данных")),
+      G.length ? h("div", { class: "ocard" }, h("table", { class: "gr" }, G[0].rows.map(r => h("tr", {}, h("td", {}, r[0]), h("td", {}, (r[1] * 20) + " кг")))), h("div", { class: "mut" }, "Записал: " + G[0].who + " · по мешкам, приблизительно"),
+        G.length > 1 ? h("details", { class: "reqbox" }, h("summary", {}, "Прошлые смены (" + (G.length - 1) + ")"), ...G.slice(1).map(e => h("div", {}, fmtD(e.day) + ": " + e.rows.map(r => r[0] + " " + (r[1] * 20)).join(", ") + " кг"))) : null)
+        : h("div", { class: "mut" }, "Смену ещё не завершили: остаток зерна пока не записан.")); }
+    const active = ST.orders.filter(o => { const st = stageOn(o, D); return st && st !== "done" && st !== "new" && (shipOn(o, D) <= D || D === TODAY) && (isMgr() || past || (!o.problem && !lockedFor(o, st))); });
+    const fin = ST.orders.filter(o => stageOn(o, D) === "done" && (o.hist.filter(e => e[1] === "done")[0] || [])[0] === D);
+    const opStage = ["manager", "boss"].includes(ST.role) ? null : myStage(ST.role);
+    if (opStage) body.append(h("div", { class: "mut" }, "Здесь только задания для вашего этапа. Возьмите заказ в работу, и он появится в «Моих заказах»."));
+    if (isMgr()) body.append(h("div", { class: "chips" }, [["", "Все этапы"], ...STAGES.map(x => [x.code, x.title])].map(([k, t]) => h("button", { class: "chip", "aria-pressed": String((ST.stageF || "") === k), onclick: () => { ST.stageF = k; render(); } }, t))));
+    const cols = h("div", { class: "cols" });
+    STAGES.filter(x => (!opStage || x.code === opStage) && (!isMgr() || !ST.stageF || x.code === ST.stageF)).forEach(s => { const si = STAGES.indexOf(s), col = h("div", { class: "col" });
+      const list = active.filter(o => stageOn(o, D) === s.code).sort((a, b) => shipOn(a, D).localeCompare(shipOn(b, D)));
+      const nxt = si + 1 < STAGES.length ? STAGES[si + 1].title : "Готово";
+      col.append(h("div", { class: "blk " + s.code }, h("span", {}, s.title), h("i", {}, list.length)));
+      if (!list.length) col.append(h("div", { class: "mut" }, "Нет заказов"));
+      let sepDone = false;
+      list.forEach(o => {
+        if (!sepDone && !past && shipOn(o, D) > D) { sepDone = true; col.append(h("div", { class: "mut", style: "margin:8px 0 2px;font-weight:600" }, "Позже: заказы на следующие дни (можно собирать заранее)")); }
+        const f = Object.assign({}, ...Object.values(o.f));
+        const cell = (t, v) => h("div", { class: "cell" }, h("small", {}, t), h("b", {}, v || "—"));
+        const locked = lockedFor(o, s.code);
+        const mine = s.role === ST.role;
+        const late = Math.max(0, diffDays(D, shipOn(o, D)));
+        col.append(h("div", { class: "ocard lrow" + (locked ? " lock" : "") + (o.hold && !past ? " hold" : "") },
+          h("div", { class: "row sp" }, h("div", {}, h("span", { class: "num" }, "№ " + o.doc), " ", h("span", { class: "mut" }, o.customer)), h("span", { class: "mut" + (!past && (o.mgr === "move" || o.moved) ? " hl" : "") }, "отгрузка " + fmtD(shipOn(o, D)) + (late ? " · перенос +" + late : "")), !past && o.mgr === "move" ? h("span", { class: "pill bad" }, "ПЕРЕНОС") : null),
+          ...(isMgr() ? [steps(o, D)] : []),
+          o.resolution && !past ? h("div", { class: "pill ok", style: "align-self:flex-start;white-space:normal" }, "Решение менеджера: " + o.resolution) : null,
+          o.problem && !past ? h("div", { class: "pill bad", style: "align-self:flex-start" }, "Ждёт решения менеджера: " + o.problem.reason) : null,
+          h("div", { class: "row" }, RV("admit") && isMgr() ? h("span", { class: "pill " + ADMIT[o.admit][1] }, ADMIT[o.admit][0]) : null, RV("cz") && o.cz ? h("span", { class: "pill ok" }, "Честный знак ✓") : null, RV("base") ? h("span", { class: "pill" }, o.base) : null,
+            isMgr() && f.packs ? h("span", { class: "pill blue" }, "пачек " + f.packs) : null, isMgr() && f.boxes ? h("span", { class: "pill blue" }, f.boxes + " кор.") : null, isMgr() && f.pcs ? h("span", { class: "pill blue" }, f.pcs + " шт") : null),
+          linesView(o),
+          RV("deliv") && o.deliv ? h("div", { class: "mut" }, "Доставка: " + o.deliv + (o.addr && o.addr !== "—" ? " · " + o.addr : "")) : null,
+          RV("created") && o.created ? h("div", { class: "mut" }, "Создан: " + fmtD(o.created)) : null,
+          o.taker ? h("div", { class: "mut" }, "В работе: " + roleName(o.taker)) : null,
+          grainBlock(o),
+          boxesBadge(o),
+          detailBtn(o),
+          !past && ["manager", "boss"].includes(ST.role) ? mgrRow(o) : null,
+          !past && ["manager", "boss"].includes(ST.role) && si > 0 ? h("div", { class: "acts" }, h("button", { class: "b s", onclick: () => rollbackSheet(o, STAGES[si - 1].code) }, "Откатить на «" + STAGES[si - 1].title + "»")) : null,
+          !past && mine ? (o.taker === ST.role ? h("div", { class: "acts" }, h("button", { class: "b g", onclick: () => doneSheet(o) }, "Передать → " + nxt), h("button", { class: "b s", onclick: () => askSheet(o) }, "Проблема"))
+            : !o.taker ? h("div", { class: "acts" }, h("button", { class: "b g", disabled: locked || o.hold, onclick: () => takeOrder(o) }, locked ? "Не грузим — ждём" : o.hold ? "На допроверке" : "Взять в работу")) : null) : null));
+      });
+      cols.append(col);
+    });
+    body.append(cols);
+    if (!past && ST.role === "packer") body.append(h("div", { class: "acts", style: "margin-top:18px" }, h("button", { class: "b g", onclick: shiftSheet }, "Завершить смену")), ...(ST.grain[0] ? [h("div", { class: "mut", style: "margin-top:6px" }, "Последняя смена: " + fmtD(ST.grain[0].day) + ", записал " + ST.grain[0].who)] : []));
+    if (fin.length && !opStage) { body.append(h("div", { class: "blk done" }, h("span", {}, "Выполнено в этот день"), h("i", {}, fin.length))); fin.forEach(o => body.append(orderCard(o, { day: D, maxLines: 2 }))); }
+  },
+  mine(body) {
+    const code = myStage(ST.role), st = STAGES.find(s => s.code === code);
+    const todo = ST.orders.filter(o => o.stage === code && o.taker === ST.role && !o.problem && !lockedFor(o, code)).sort((a, b) => a.ship.localeCompare(b.ship));
+    body.append(h("div", { class: "ph2" }, "Мои заказы · " + st.title), h("div", { class: "mut" }, "Только то, что вы взяли в работу. Здесь вносятся данные по заказу и заказ передаётся дальше."));
+    if (!todo.length) body.append(h("div", { class: "empty" }, "Вы пока ничего не взяли в работу.", h("br"), "Откройте «Лист», выберите заказ в вашем блоке и нажмите «Взять в работу»."));
+    const undo = ST.orders.filter(o => o.lastBy === ST.role && o.lastFrom && stageIdx(o.lastFrom) + 1 === (o.stage === "done" ? STAGES.length : stageIdx(o.stage)));
+    if (undo.length) { body.append(h("div", { class: "ph3" }, "Вы недавно передали (если отметили случайно)"), ...undo.map(o => h("div", { class: "ocard" }, h("div", { class: "row sp" }, h("b", {}, "№ " + o.doc + " · " + o.customer), h("span", { class: "mut" }, "сейчас: " + stageTitle(o.stage))), h("div", { class: "acts" }, h("button", { class: "b s", onclick: () => rollbackSheet(o, o.lastFrom) }, "Откатить назад"))))); }
+    todo.forEach(o => {
+      const cur = o.f[code] || {};
+      const inputs = st.fields.map(f => h("div", {}, h("label", { class: "mut" }, f.title), h("input", { class: "inl", type: "number", inputmode: "decimal", min: "0", value: cur[f.code] || "", placeholder: "0", onchange: e => { o.f[code] = { ...(o.f[code] || {}), [f.code]: e.target.value }; e.target.style.borderColor = "#2b8a63"; } })));
+      const note = h("textarea", { class: "inl", placeholder: "Заметка по заказу (необязательно)", onchange: e => { o.note = e.target.value; e.target.style.borderColor = "#2b8a63"; } }); note.value = o.note || "";
+      const pickMode = PICK_STAGES.includes(code);
+      const pIX = o.lines.map((l, i) => i).filter(i => code !== "label" || !isKraft(o.lines[i][0])); const pdone = pickMode ? pIX.filter(i => ((o.pk || {})[code] || {})[i] && o.pk[code][i].ok).length : 0;
+      body.append(orderCard(o, { day: TODAY, extra: [pickMode ? h("div", { class: "mut" }, (code === "pack" ? "Собрано позиций: " : "Расклеено позиций: ") + pdone + " из " + pIX.length) : (inputs.length ? h("div", { class: "cells2" }, inputs) : null), pickMode ? null : note, h("div", { class: "acts" },
+        pickMode ? h("button", { class: "b g", onclick: () => { ST.open = o.id; render(); } }, code === "pack" ? "Собрать заказ →" : "Расклеить заказ →") : h("button", { class: "b g", onclick: () => doneSheet(o) }, code === "ship" ? "Отгрузить" : "Передать →"),
+        h("button", { class: "b s", onclick: () => askSheet(o) }, "Проблема"),
+        h("button", { class: "b s", onclick: () => { o.taker = null; say("Заказ вернулся в очередь"); } }, "Вернуть"))] }));
+    });
+  },
+  day(body) {
+    const D = ST.day, past = dayNav(body, "День");
+    const active = ST.orders.filter(o => { const st = stageOn(o, D); return st && st !== "done" && st !== "new" && shipOn(o, D) <= D && (isMgr() || past || (!o.problem && !lockedFor(o, st))); });
+    const fin = ST.orders.filter(o => stageOn(o, D) === "done" && (o.hist.filter(e => e[1] === "done")[0] || [])[0] === D);
+    body.append(h("div", { class: "mut" }, "В работе: " + active.length + " · перенесено: " + active.filter(o => shipOn(o, D) < D).length + " · на допроверке: " + active.filter(o => o.hold && !past).length + " · выполнено: " + fin.length));
+    STAGES.forEach(s => {
+      const list = active.filter(o => stageOn(o, D) === s.code).sort((a, b) => shipOn(a, D).localeCompare(shipOn(b, D)));
+      body.append(h("div", { class: "blk " + s.code }, h("span", {}, s.title), h("i", {}, list.length)));
+      if (!list.length) body.append(h("div", { class: "mut", style: "margin-bottom:6px" }, "Нет заказов"));
+      list.forEach(o => body.append(orderCard(o, { day: D, extra: !past && (ST.role === "manager" || ST.role === "boss") ? [h("div", { class: "row" },
+        RV("admit") ? h("select", { class: "sel", "aria-label": "Допуск", onchange: e => { o.admit = e.target.value; render(); } }, Object.entries(ADMIT).map(([k, v]) => h("option", { value: k, selected: o.admit === k }, v[0]))) : null,
+        h("button", { class: "b s", onclick: () => moveSheet(o) }, "Перенос…"))] : [] })));
+    });
+    if (fin.length) { body.append(h("div", { class: "blk done" }, h("span", {}, "Выполнено в этот день"), h("i", {}, fin.length))); fin.forEach(o => body.append(orderCard(o, { day: D, maxLines: 2 }))); }
+  },
+  orders(body) {
+    if (ST.role !== "boss") return VIEWS.mine(body);
+    const F = ST.filter || "all", Q = (ST.q || "").toLowerCase();
+    body.append(h("div", { class: "ph2" }, "Все заказы"));
+    const chips = [["all", "Все"], ["work", "В работе"], ["new", "Новые"], ["prob", "Проблемные"], ["done", "Готовые"]];
+    const q = h("input", { class: "inl", type: "search", placeholder: "Поиск: номер или клиент", oninput: e => { ST.q = e.target.value; clearTimeout(ST.qt); ST.qt = setTimeout(() => { render(); const i = document.querySelector("#screen input.inl"); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); } });
+    q.value = ST.q || "";
+    body.append(q, h("div", { class: "chips" }, chips.map(([k, t]) => h("button", { class: "chip" + (F === k ? " on" : ""), onclick: () => { ST.filter = k; render(); } }, t))));
+    const pass = o => (F === "all" || (F === "work" && !["new", "done"].includes(o.stage)) || (F === "new" && o.stage === "new") || (F === "prob" && o.stage !== "done" && problemsOf(o).length) || (F === "done" && o.stage === "done")) && (!Q || (o.doc + " " + o.customer).toLowerCase().includes(Q));
+    const list = ST.orders.filter(pass).sort((a, b) => a.ship.localeCompare(b.ship));
+    body.append(h("div", { class: "mut", style: "margin:8px 0" }, "Найдено: " + list.length));
+    if (!list.length) body.append(h("div", { class: "empty" }, "Ничего не найдено"));
+    list.forEach(o => { const f = Object.assign({}, ...Object.values(o.f)); body.append(orderCard(o, { day: TODAY, maxLines: 4, extra: [h("div", { class: "mut" }, "Сейчас: " + stageTitle(o.stage) + (o.taker ? " · в работе: " + roleName(o.taker) : "") + (f.boxes ? " · коробок " + f.boxes : "") + (f.pcs ? " · " + f.pcs + " шт" : ""))] })); });
+  },
+  sum(body) {
+    const A = ST.orders.filter(o => !["new", "done"].includes(o.stage)), N = ST.orders.filter(o => o.stage === "new"), P = A.filter(o => problemsOf(o).length);
+    const fin = ST.orders.filter(o => o.stage === "done" && o.done === TODAY), late = A.filter(o => o.ship < TODAY);
+    const num = v => parseFloat(String(v || "").replace(",", ".")) || 0;
+    const kg = ST.orders.filter(o => o.stage === "done" || o.stage === "ship").reduce((a, o) => a + num(Object.assign({}, ...Object.values(o.f)).pcs), 0);
+    const go = (t, f) => () => { ST.tab = t; if (f) ST.filter = f; render(); };
+    const tile = (n, t, cls, to, f) => h("button", { class: "tile " + (cls || ""), onclick: go(to, f) }, h("b", {}, n), h("span", {}, t));
+    body.append(h("div", { class: "ph2" }, "Сводка · " + fmtD(TODAY) + ".2026"),
+      h("div", { class: "tiles" }, tile(N.length, "Новые, ждут передачи", N.length ? "warn" : "", "orders", "new"), tile(A.length, "В работе в цехе", "", "orders", "work"), tile(P.length, "Проблемные", P.length ? "bad" : "", "prob"), tile(late.length, "Просрочено", late.length ? "warn" : "", "list"), tile(fin.length, "Выполнено сегодня", "ok", "orders", "done"), tile(ST.orders.filter(o => o.stage === "ship" || o.stage === "done").length, "Заказов собрано", "", "orders", "done")));
+    body.append(h("div", { class: "blk done" }, h("span", {}, "По этапам"), h("i", {}, A.length)));
+    const mx = Math.max(1, ...STAGES.map(s => A.filter(o => o.stage === s.code).length));
+    body.append(h("div", { class: "ocard" }, STAGES.map(s => { const l = A.filter(o => o.stage === s.code), who = [...new Set(l.filter(o => o.taker).map(o => roleName(o.taker)))];
+      return h("div", { class: "srow", style: "cursor:pointer", role: "button", tabindex: "0", onclick: () => { ST.stageF = s.code; ST.tab = "list"; render(); } }, h("div", { class: "row sp" }, h("b", {}, s.title + " ›"), h("span", {}, l.length)), h("div", { class: "bar " + s.code }, h("i", { style: "width:" + Math.round(l.length / mx * 100) + "%" })), h("div", { class: "mut" }, l.length ? (who.length ? "Взяли в работу: " + who.join(", ") : "Никто ещё не взял") : "Пусто")); })));
+    body.append(h("div", { class: "blk done" }, h("span", {}, "Требует внимания"), h("i", {}, P.length)));
+    if (!P.length) body.append(h("div", { class: "mut" }, "Проблем нет"));
+    P.forEach(o => body.append(h("button", { class: "ocard lnk", onclick: go("prob") }, h("div", { class: "row sp" }, h("span", { class: "num" }, "№ " + o.doc), h("span", { class: "mut" }, o.customer)), h("div", { class: "row" }, problemsOf(o).map(([k, t]) => h("span", { class: "pill " + k }, t))), o.problem && o.problem.text ? h("div", { class: "mut" }, o.problem.text) : null)));
+    { const gw = ST.orders.filter(o => o.grainWait && o.stage !== "done"); body.append(h("div", { class: "blk label" }, h("span", {}, "Ждут зерно"), h("i", {}, gw.length))); if (!gw.length) body.append(h("div", { class: "mut" }, "Нет")); gw.forEach(o => body.append(h("div", { class: "ocard" }, h("div", { class: "row sp" }, h("span", { class: "num" }, "№ " + o.doc), h("span", { class: "mut" }, o.customer)), h("div", { class: "mut" }, (o.grainWait.text || "Нет зерна") + " · " + o.grainWait.by + ", " + fmtD(o.grainWait.date))))); }
+    const G = ST.grain;
+    body.append(h("div", { class: "blk done" }, h("span", {}, "Остаток зерна"), h("i", {}, G.length ? fmtD(G[0].day) : "нет")),
+      G.length ? h("div", { class: "ocard" }, h("table", { class: "gr" }, G[0].rows.map(r => h("tr", {}, h("td", {}, r[0]), h("td", {}, (r[1] * 20) + " кг")))), h("div", { class: "mut" }, "Записал: " + G[0].who + " · по мешкам, приблизительно"),
+        G.length > 1 ? h("details", { class: "reqbox" }, h("summary", {}, "Прошлые смены (" + (G.length - 1) + ")"), ...G.slice(1).map(e => h("div", {}, fmtD(e.day) + ": " + e.rows.map(r => r[0] + " " + (r[1] * 20)).join(", ") + " кг"))) : null) : h("div", { class: "mut" }, "Смену ещё не завершили: остаток зерна не записан."));
+    body.append(h("div", { class: "blk done" }, h("span", {}, "Выполнено сегодня"), h("i", {}, fin.length)));
+    if (!fin.length) body.append(h("div", { class: "mut" }, "Пока нет"));
+    fin.forEach(o => { const f = Object.assign({}, ...Object.values(o.f)); body.append(h("div", { class: "ocard" }, h("div", { class: "row sp" }, h("span", { class: "num" }, "№ " + o.doc), h("span", { class: "mut" }, o.customer)), h("div", { class: "mut" }, (f.boxes ? f.boxes + " кор. " : "") + (f.pcs ? "· " + f.pcs + " шт" : "")))); });
+  },
+  inbox(body) {
+    const qs = qFor(ST.role);
+    body.append(h("div", { class: "ph2" }, "Вопросы мне"));
+    if (!qs.length) { body.append(h("div", { class: "empty" }, "Вопросов нет")); return; }
+    qs.forEach(q => {
+      const o = ST.orders.find(x => x.id === q.order), ans = h("textarea", { placeholder: "Ответ" });
+      body.append(h("div", { class: "ocard hold" }, h("div", { class: "row sp" }, h("b", {}, "№ " + o.doc + " · " + o.customer), h("span", { class: "pill warn" }, "от этапа «" + stageTitle(q.from) + "»")), h("div", {}, q.text), ans,
+        h("button", { class: "b g", onclick: () => { q.open = false; o.hold = false; q.answer = ans.value; say("Ответ отправлен"); } }, "Ответить")));
+    });
+  },
+  grain(body) {
+    const ins = GRAINS.map(g => h("input", { type: "number", inputmode: "numeric", min: "0", placeholder: "мешков", "aria-label": g }));
+    body.append(h("div", { class: "ph2" }, "Остаток зерна на конец смены"), h("div", { class: "mut" }, "Считаем мешки и умножаем на 20 кг. Это приблизительно."),
+      h("div", { class: "ocard" }, h("table", { class: "gr" }, h("tr", {}, h("th", {}, "Сорт"), h("th", {}, "Мешков")), ...GRAINS.map((g, i) => h("tr", {}, h("td", {}, g), h("td", {}, ins[i])))),
+        h("button", { class: "b g", onclick: () => { const rows = GRAINS.map((g, i) => [g, +ins[i].value || 0]); ST.grain.unshift({ day: ST.day, who: (ROLES.find(r => r[0] === ST.role) || [])[1], rows }); say("Записано"); } }, "Записать остаток")));
+    if (ST.grain.length) body.append(h("div", { class: "ph3" }, "Журнал"), ...ST.grain.map(e => h("div", { class: "ocard" }, h("div", { class: "row sp" }, h("b", {}, fmtD(e.day)), h("span", { class: "mut" }, e.who)), h("div", {}, e.rows.map(r => r[0] + ": " + (r[1] * 20) + " кг").join(" · ")))));
+  },
+  more(body) {
+    body.append(h("div", { class: "ph2" }, "Ещё"), ...["Загрузка заказов (файл из 1С)", "Сотрудники и роли", "Настройки маршрута"].map(t => h("div", { class: "ocard" }, h("b", {}, t), h("div", { class: "mut" }, "Экран уже есть в платформе, в прототипе не показан"))));
+  }
+};
+
+/* ============================================================ вывод */
+function render() {
+  const scr = document.getElementById("screen");
+  const role = ST.role, tabs = tabsFor(role);
+  if (!tabs.find(t => t[0] === ST.tab)) ST.tab = tabs[0][0];
+  const body = h("div", { class: "body " + (ST.tab === "sum" ? "sum" : ["orders", "new", "prob", "mine"].includes(ST.tab) ? "grid3" : "") });
+  if (ST.open) { const oo = ST.orders.find(x => x.id === ST.open); if (!oo || !PICK_STAGES.includes(oo.stage) || oo.problem || oo.taker !== ST.role) ST.open = null; }
+  if (ST.detail && !ST.orders.find(x => x.id === ST.detail)) ST.detail = null;
+  if (ST.open) VIEWS.order(body); else if (ST.detail) VIEWS_DETAIL(body); else VIEWS[ST.tab](body);
+  if (ST.tab === "sum") { let sec = null; [...body.children].forEach(c => { if (c.classList.contains("blk")) { sec = h("div", { class: "sec" }); body.insertBefore(sec, c); } if (sec) sec.append(c); }); }
+  const inboxN = qFor(role).length;
+  scr.replaceChildren(h("div", { class: "app-top" }, h("span", {}, (ROLES.find(r => r[0] === role) || [])[1]), h("span", { class: "who" }, "Выйти")), body,
+    h("div", { class: "tabbar", role: "tablist" }, tabs.map(([id, ic, name]) => h("button", { role: "tab", "aria-selected": String(ST.tab === id), onclick: () => { ST.tab = id; ST.detail = null; ST.open = null; render(); } }, h("span", { class: "ic" }, ic), name, (() => { const n = id === "inbox" ? inboxN : id === "new" ? ST.orders.filter(o => o.stage === "new").length : id === "prob" ? ST.orders.filter(o => o.stage !== "done" && o.stage !== "new" && problemsOf(o).length).length : 0; return n ? h("span", { class: "badge" }, n) : null; })()))),
+    ...(ST.toast ? [h("div", { class: "toast", role: "status" }, ST.toast)] : []));
+  document.body.classList.toggle("desk", ST.device === "desk");
+  const big = ST.view.big; document.documentElement.style.setProperty("--btn-h", big === "huge" ? "64px" : big === "big" ? "54px" : "46px"); document.documentElement.style.setProperty("--fs", big === "huge" ? "18px" : big === "big" ? "16px" : "15px");
+  renderPult();
+}
+let noteDraft = "";
+function renderPult() {
+  const p = document.getElementById("pult");
+  const keepFocus = document.activeElement && document.activeElement.id === "noteInput";
+  const roles = h("div", { class: "roles" }, ROLES.map(([k, t]) => h("button", { "aria-pressed": String(ST.role === k), onclick: () => { ST.role = k; ST.open = null; ST.detail = null; ST.tab = tabsFor(k)[0][0]; render(); } }, t)));
+  const toggle = (key, text) => h("label", { class: "chk" }, h("input", { type: "checkbox", checked: RV(key), onchange: e => { (ST.view.roles[ST.role] = ST.view.roles[ST.role] || { ...ALLON })[key] = e.target.checked; touch(); render(); } }), text);
+  const size = h("div", { class: "seg" }, [["normal", "Обычные"], ["big", "Крупные"], ["huge", "Для перчаток"]].map(([k, t]) => h("button", { "aria-pressed": String(ST.view.big === k), onclick: () => { ST.view.big = k; touch(); render(); } }, t)));
+  const ta = h("textarea", { class: "note", id: "noteInput", placeholder: "Что неудобно или чего не хватает на этом экране?", oninput: e => { noteDraft = e.target.value; } });
+  ta.value = noteDraft;
+  const scr = (ROLES.find(r => r[0] === ST.role) || [])[1] + " · " + ((tabsFor(ST.role).find(t => t[0] === ST.tab) || [])[2] || "");
+  p.replaceChildren(
+    h("div", { class: "box" }, h("h3", {}, "Где смотрим"), h("div", { class: "hint" }, "На широком экране компьютера включается сам. Переключить можно здесь."), h("div", { class: "seg" }, [["phone", "Телефон"], ["desk", "Компьютер"]].map(([k, t]) => h("button", { "aria-pressed": String((ST.device || "phone") === k), onclick: () => { ST.device = k; render(); } }, t))), h("h3", {}, "Чей экран смотрим"), roles, h("div", { class: "hint" }, "Сегодня в макете " + fmtD(TODAY) + ".2026. Заказы и имена выдуманные.")),
+    h("div", { class: "box" }, h("h3", {}, "Что показывать на карточке: " + roleName(ST.role)), h("div", { class: "hint" }, "Настройка отдельная для каждой роли."), toggle("admit", "Допуск «Грузим / Не грузим»"), toggle("cz", "Честный знак"), toggle("base", "База (Луна / Троица)"), toggle("fields", "Коробки и пачки"), toggle("reqs", "Требования клиента"), toggle("deliv", "Способ доставки и адрес"), toggle("created", "Дата создания"),
+      h("h3", {}, "Размер кнопок"), size),
+    h("div", { class: "box" }, h("h3", {}, "Замечание к экрану"), h("div", { class: "hint" }, "Сейчас открыто: " + scr), ta,
+      h("div", { class: "row" }, h("button", { class: "btn pri", onclick: () => { const t = noteDraft.trim(); if (!t) return; ST.notes.unshift({ id: "n" + Date.now(), at: new Date().toISOString(), screen: scr, text: t }); noteDraft = ""; touch(); render(); } }, "Записать замечание"), h("span", { class: "status", id: "saveStatus" }, mode === "pending" ? "Загрузка…" : mode === "db" ? "Замечания сохраняются" : "Сохранение в этом браузере")),
+      ST.notes.length ? h("div", { class: "notes" }, ST.notes.map(n => h("div", { class: "nt" }, h("small", {}, n.screen), n.text, " ", h("button", { class: "btn", style: "padding:0 8px", "aria-label": "Удалить замечание", onclick: () => { ST.notes = ST.notes.filter(x => x.id !== n.id); touch(); render(); } }, "✕")))) : null,
+      ST.notes.length ? h("button", { class: "btn", onclick: async e => { try { await navigator.clipboard.writeText(ST.notes.map(n => "[" + n.screen + "] " + n.text).join("\n")); e.target.textContent = "Скопировано ✓"; } catch (x) { e.target.textContent = "Выделите и скопируйте вручную"; } } }, "Скопировать замечания") : null),
+    h("div", { class: "box" }, h("button", { class: "btn", onclick: () => { ST.orders = seed(); ST.questions = []; ST.grain = []; ST.day = TODAY; ST.last1c = null; docSeq = 111; render(); } }, "Начать день заново (демо-заказы)")));
+  if (keepFocus) { const n = document.getElementById("noteInput"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
+}
+render();
+initStore();
+</script>
+</body>
+</html>
