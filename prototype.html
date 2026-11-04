@@ -849,26 +849,16 @@ function render() {
   const big = ST.view.big; document.documentElement.style.setProperty("--btn-h", big === "huge" ? "64px" : big === "big" ? "54px" : "46px"); document.documentElement.style.setProperty("--fs", big === "huge" ? "18px" : big === "big" ? "16px" : "15px");
   renderPult();
 }
-let noteDraft = "";
 function renderPult() {
   const p = document.getElementById("pult");
-  const keepFocus = document.activeElement && document.activeElement.id === "noteInput";
   const roles = h("div", { class: "roles" }, ROLES.map(([k, t]) => h("button", { "aria-pressed": String(ST.role === k), onclick: () => { ST.role = k; ST.open = null; ST.detail = null; ST.tab = tabsFor(k)[0][0]; render(); } }, t)));
   const toggle = (key, text) => h("label", { class: "chk" }, h("input", { type: "checkbox", checked: RV(key), onchange: e => { (ST.view.roles[ST.role] = ST.view.roles[ST.role] || { ...ALLON })[key] = e.target.checked; touch(); render(); } }), text);
   const size = h("div", { class: "seg" }, [["normal", "Обычные"], ["big", "Крупные"], ["huge", "Для перчаток"]].map(([k, t]) => h("button", { "aria-pressed": String(ST.view.big === k), onclick: () => { ST.view.big = k; touch(); render(); } }, t)));
-  const ta = h("textarea", { class: "note", id: "noteInput", placeholder: "Что неудобно или чего не хватает на этом экране?", oninput: e => { noteDraft = e.target.value; } });
-  ta.value = noteDraft;
-  const scr = (ROLES.find(r => r[0] === ST.role) || [])[1] + " · " + ((tabsFor(ST.role).find(t => t[0] === ST.tab) || [])[2] || "");
   p.replaceChildren(
     h("div", { class: "box" }, h("h3", {}, "Где смотрим"), h("div", { class: "hint" }, "На широком экране компьютера включается сам. Переключить можно здесь."), h("div", { class: "seg" }, [["phone", "Телефон"], ["desk", "Компьютер"]].map(([k, t]) => h("button", { "aria-pressed": String((ST.device || "phone") === k), onclick: () => { ST.device = k; render(); } }, t))), h("h3", {}, "Чей экран смотрим"), roles, h("div", { class: "hint" }, "Сегодня в макете " + fmtD(TODAY) + ".2026. Заказы и имена выдуманные.")),
     h("div", { class: "box" }, h("h3", {}, "Что показывать на карточке: " + roleName(ST.role)), h("div", { class: "hint" }, "Настройка отдельная для каждой роли."), toggle("admit", "Допуск «Грузим / Не грузим»"), toggle("cz", "Честный знак"), toggle("base", "База (Луна / Троица)"), toggle("fields", "Коробки и пачки"), toggle("reqs", "Требования клиента"), toggle("deliv", "Способ доставки и адрес"), toggle("created", "Дата создания"),
       h("h3", {}, "Размер кнопок"), size),
-    h("div", { class: "box" }, h("h3", {}, "Замечание к экрану"), h("div", { class: "hint" }, "Сейчас открыто: " + scr), ta,
-      h("div", { class: "row" }, h("button", { class: "btn pri", onclick: () => { const t = noteDraft.trim(); if (!t) return; ST.notes.unshift({ id: "n" + Date.now(), at: new Date().toISOString(), screen: scr, text: t }); noteDraft = ""; touch(); render(); } }, "Записать замечание"), h("span", { class: "status", id: "saveStatus" }, mode === "pending" ? "Загрузка…" : mode === "db" ? "Замечания сохраняются" : "Сохранение в этом браузере")),
-      ST.notes.length ? h("div", { class: "notes" }, ST.notes.map(n => h("div", { class: "nt" }, h("small", {}, n.screen), n.text, " ", h("button", { class: "btn", style: "padding:0 8px", "aria-label": "Удалить замечание", onclick: () => { ST.notes = ST.notes.filter(x => x.id !== n.id); touch(); render(); } }, "✕")))) : null,
-      ST.notes.length ? h("button", { class: "btn", onclick: async e => { try { await navigator.clipboard.writeText(ST.notes.map(n => "[" + n.screen + "] " + n.text).join("\n")); e.target.textContent = "Скопировано ✓"; } catch (x) { e.target.textContent = "Выделите и скопируйте вручную"; } } }, "Скопировать замечания") : null),
     h("div", { class: "box" }, h("button", { class: "btn", onclick: () => { ST.orders = seed(); ST.questions = []; ST.grain = []; ST.day = TODAY; ST.last1c = null; docSeq = 111; render(); } }, "Начать день заново (демо-заказы)")));
-  if (keepFocus) { const n = document.getElementById("noteInput"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
 }
 render();
 initStore();
