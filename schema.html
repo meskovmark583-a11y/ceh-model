@@ -77,7 +77,6 @@ header .sp{flex:1}
   <h1>Схема цеха</h1>
   <div role="tablist" aria-label="Вид схемы" style="display:flex;gap:6px">
     <button class="btn" role="tab" id="tMain" type="button" aria-selected="true">Весь путь заказа</button>
-    <button class="btn" role="tab" id="tAdm" type="button" aria-selected="false">Допуск: что куда ведёт</button>
   </div>
   <button class="btn pri" id="addNode" type="button">+ Блок</button>
   <button class="btn" id="asText" type="button">Показать текстом</button>
@@ -105,31 +104,23 @@ function seed() {
       { id: "in", x: 30, y: 200, title: "Заказ из 1С", who: "1С", note: "Заказ покупателя с бумажного листа", values: [V("v1", "Заказ загружен", "mgr")] },
       { id: "mgr", x: 320, y: 40, title: "Проверка заказа", who: "Менеджер", note: "Колонка B «Для менеджера: ОК / Перенос»", values: [V("v2", "ОК", "adm", "ok"), V("v3", "Перенос", "date", "warn")] },
       { id: "date", x: 610, y: 330, title: "Новая дата отгрузки", who: "Менеджер", note: "Выбор даты в календаре; в таблице красный ПЕРЕНОС и жёлтая дата", values: [V("v4", "Дата выбрана", "adm", "ok")] },
-      { id: "adm", x: 900, y: 40, title: "Допуск", who: "Менеджер", note: "Колонка A «Задача». Один выключатель: есть допуск или нет. Что значит каждый вариант, смотри вкладку «Допуск»", values: [V("v5", "Допуск есть (Грузим и его варианты)", "lab", "ok"), V("v8", "Нет допуска (Не грузим)", "wait", "bad")] },
-      { id: "wait", x: 1190, y: 330, title: "Остановка: нет допуска", who: "Менеджер", note: "Ответвление от колонки A. Цех такой заказ не собирает (обычно не оплачен), пока менеджер не даст допуск", values: [V("v9", "Допуск дали", "lab", "ok")] },
-      { id: "lab", x: 1190, y: 40, title: "Расклейка", who: "Расклейщица", note: "Колонка I «Статус расклейки». Мешки в крафте не клеим", values: [V("v10", "Не готово"), V("v11", "Готово, пачек расклеено", "pack", "ok"), V("v12", "Нет наклеек", "prob", "bad"), V("v27", "Частично", "prob", "warn")] },
-      { id: "prob", x: 1480, y: 330, title: "Проблема у менеджера", who: "Менеджер", note: "Заказ у цеха пропадает, пока менеджер и директор не решат", values: [V("v13", "Решили: вернуть в работу", "pack", "ok"), V("v14", "Перенос на другую дату", "date", "warn")] },
-      { id: "pack", x: 1480, y: 40, title: "Сборка", who: "Фасовщик", note: "Колонка J «Статус сборки». Считаем в штуках, пишем коробки", values: [V("v15", "Не готово"), V("v16", "Готово, коробок N", "ship", "ok"), V("v17", "Частично, не хватило", "part", "warn"), V("v18", "Замена документов", "prob", "warn"), V("v19", "Нет зерна", "grain", "warn")] },
-      { id: "grain", x: 1770, y: 330, title: "Ждём зерно", who: "Директор", note: "Не проблема. Заказ остаётся у фасовщика, директор и менеджер видят пометку", values: [V("v20", "Зерно появилось", "pack", "ok")] },
-      { id: "part", x: 2060, y: 330, title: "Недовоз", who: "Менеджер", note: "Решает менеджер вместе с клиентом", values: [V("v21", "Отгрузить что собрано", "ship", "ok"), V("v22", "Остаток в новый заказ «-Н»", "in", "warn")] },
-      { id: "ship", x: 1770, y: 40, title: "Отгрузка", who: "Грузчик", note: "Колонка K «Статус доставки». Видит число коробок", values: [V("v23", "Выполнена", "done", "ok"), V("v24", "Не выполнена", "prob", "bad")] },
+      { id: "adm", x: 900, y: 40, title: "Допуск", who: "Менеджер", note: "Колонка A «Задача». Один выключатель: есть допуск или нет. Проблемы цеха смотри в блоках операций: они возвращают заказ менеджеру", values: [V("v5", "Допуск есть", "lab", "ok"), V("v8", "Нет допуска", "wait", "bad")] },
+      { id: "wait", x: 1190, y: 560, title: "Остановка: нет допуска", who: "Менеджер", note: "Ответвление от колонки A. Цех такой заказ не собирает (обычно не оплачен), пока менеджер не даст допуск", values: [V("v9", "Допуск дали", "lab", "ok")] },
+      { id: "lab", x: 1190, y: 40, title: "Расклейка", who: "Расклейщица", note: "Колонка I «Статус расклейки». Мешки в крафте не клеим", values: [V("v10", "Не готово"), V("v11", "Готово, пачек расклеено", "pack", "ok"), V("v12", "Нет наклеек", "prob", "bad"), V("v27", "Частично расклеено", "prob", "warn"), V("v28", "Ошибка в заказе (вес, позиция)", "prob", "bad"), V("v29", "Нет зерна", "grain", "warn")] },
+      { id: "prob", x: 1700, y: 560, title: "Проблема у менеджера", who: "Менеджер", note: "Любая проблема на любой операции возвращает заказ сюда. Заказ у цеха пропадает, пока менеджер и директор не решат", values: [V("v13", "Решили: вернуть в работу", "pack", "ok"), V("v14", "Перенос на другую дату", "date", "warn"), V("v34", "Допуск снят", "wait", "bad")] },
+      { id: "pack", x: 1480, y: 40, title: "Сборка", who: "Фасовщик", note: "Колонка J «Статус сборки». Считаем в штуках, пишем коробки", values: [V("v15", "Не готово"), V("v16", "Готово, коробок N", "ship", "ok"), V("v17", "Частично, не хватило", "part", "warn"), V("v30", "Не хватило пакетов", "prob", "bad"), V("v31", "Вес не соответствует", "prob", "bad"), V("v19", "Нет зерна", "grain", "warn")] },
+      { id: "grain", x: 2000, y: 560, title: "Ждём зерно", who: "Директор", note: "Не проблема. Заказ остаётся у фасовщика, директор и менеджер видят пометку", values: [V("v20", "Зерно появилось", "pack", "ok")] },
+      { id: "part", x: 2290, y: 560, title: "Недовоз", who: "Менеджер", note: "Решает менеджер вместе с клиентом", values: [V("v21", "Отгрузить что собрано", "ship", "ok"), V("v22", "Остаток в новый заказ «-Н»", "in", "warn")] },
+      { id: "ship", x: 1770, y: 40, title: "Отгрузка", who: "Грузчик", note: "Колонка K «Статус доставки». Видит число коробок", values: [V("v23", "Выполнена", "done", "ok"), V("v24", "Не выполнена", "prob", "bad"), V("v32", "Клиент не принял или не приехал", "prob", "bad"), V("v33", "Не хватает коробок", "prob", "bad")] },
       { id: "data", x: 30, y: 420, title: "Что есть в строке заказа", who: "1С", note: "Колонки C–H и L–O. Только справка, стрелок нет", info: true, values: [V("d1", "Дата создания"), V("d2", "Дата отгрузки"), V("d3", "Номер заказа (НФНЛ / 00УФ)"), V("d4", "Состав: 13 бр, 12 4гр…"), V("d5", "Заказ: клиент с пометками (э), ек"), V("d6", "ЧЗ: V с Честным знаком, O без"), V("d7", "Коробок и пачек"), V("d8", "База: Луна / Троица"), V("d9", "Способ доставки и адрес")] },
-      { id: "eve", x: 1770, y: 700, title: "Остатки на вечер", who: "Фасовщик", note: "Низ таблицы: сорта и сколько осталось. Мешки × 20 кг, приблизительно", values: [V("e1", "Остаток записан", "sum", "ok")] },
-      { id: "sum", x: 2060, y: 700, title: "Сводка директора", who: "Директор", note: "Видит остатки зерна, проблемы, «Ждём зерно»", values: [] },
-      { id: "a_adm", g: "adm", x: 30, y: 330, title: "Допуск", who: "Менеджер", note: "Колонка A «Задача». Менеджер меняет допуск в любой момент", values: [V("a1", "Грузим", "a_go", "ok"), V("a2", "Грузим без оплаты", "a_nopay", "ok"), V("a3", "Сборка без отгрузки", "a_noship", "warn"), V("a4", "Не грузим", "a_stop", "bad")] },
-      { id: "a_go", g: "adm", x: 380, y: 30, title: "Грузим", who: "Менеджер", note: "Всё разрешено, оплата есть", values: [V("a5", "Расклейщица клеит", "a_lab", "ok"), V("a6", "Фасовщик собирает", "a_pack", "ok"), V("a7", "Грузчик отгружает", "a_ship", "ok")] },
-      { id: "a_nopay", g: "adm", x: 380, y: 270, title: "Грузим без оплаты", who: "Менеджер", note: "Как «Грузим», но оплаты ещё нет. Менеджер и директор видят пометку", values: [V("a8", "Расклейщица клеит", "a_lab", "ok"), V("a9", "Фасовщик собирает", "a_pack", "ok"), V("a10", "Грузчик отгружает", "a_ship", "ok")] },
-      { id: "a_noship", g: "adm", x: 380, y: 510, title: "Сборка без отгрузки", who: "Менеджер", note: "Собираем заранее, но грузчику не отдаём", values: [V("a11", "Расклейщица клеит", "a_lab", "ok"), V("a12", "Фасовщик собирает", "a_pack", "ok"), V("a13", "Грузчик не отгружает", null, "bad")] },
-      { id: "a_stop", g: "adm", x: 380, y: 750, title: "Не грузим", who: "Менеджер", note: "Обычно не оплачен. Цех не собирает, даже если зерно есть", values: [V("a14", "Расклейщица: клеит или нет? (вопрос В9)", "a_lab", "warn"), V("a15", "Фасовщик не собирает", null, "bad"), V("a16", "Грузчик не отгружает", null, "bad")] },
-      { id: "a_lab", g: "adm", x: 770, y: 120, title: "Расклейка", who: "Расклейщица", note: "Заказ появляется у расклейщицы", values: [] },
-      { id: "a_pack", g: "adm", x: 770, y: 420, title: "Сборка", who: "Фасовщик", note: "Заказ появляется у фасовщика", values: [] },
-      { id: "a_ship", g: "adm", x: 770, y: 700, title: "Отгрузка", who: "Грузчик", note: "Заказ появляется у грузчика", values: [] },
+      { id: "eve", x: 1770, y: 960, title: "Остатки на вечер", who: "Фасовщик", note: "Низ таблицы: сорта и сколько осталось. Мешки × 20 кг, приблизительно", values: [V("e1", "Остаток записан", "sum", "ok")] },
+      { id: "sum", x: 2060, y: 960, title: "Сводка директора", who: "Директор", note: "Видит остатки зерна, проблемы, «Ждём зерно»", values: [] },
       { id: "done", x: 2060, y: 40, title: "Готово", who: "Директор", note: "Заказ закрыт, виден в сводке директора", values: [] }
     ]
   };
 }
 
-const SEED_VER = 4;
+const SEED_VER = 5;
 let view = "main";
 let S = seed(), sel = null, mode = "pending", doc = null, saveT = null;
 const $ = id => document.getElementById(id);
@@ -154,6 +145,7 @@ function el(tag, attrs, ...kids) {
 function migrate(saved) {
   const base = seed().nodes;
   if ((saved.ver || 1) >= SEED_VER) return saved.nodes;
+  if ((saved.ver || 1) < 5) { saved.nodes = saved.nodes.filter(x => x.g !== "adm"); ["wait", "grain", "part", "prob", "eve", "sum"].forEach(id => { const n = saved.nodes.find(x => x.id === id), b = base.find(x => x.id === id); if (n && b) { n.x = b.x; n.y = b.y; } }); ["lab", "pack", "ship", "prob"].forEach(id => { const n = saved.nodes.find(x => x.id === id), b = base.find(x => x.id === id); if (n && b) { n.values = b.values; n.note = b.note; } }); }
   if ((saved.ver || 1) < 4) { const a = saved.nodes.find(x => x.id === "adm"), b = base.find(x => x.id === "adm"); if (a && b) { a.values = b.values; a.note = b.note; } const w = saved.nodes.find(x => x.id === "wait"), bw = base.find(x => x.id === "wait"); if (w && bw) { w.title = bw.title; w.note = bw.note; } }
   base.forEach(b => { const n = saved.nodes.find(x => x.id === b.id); if (!n) saved.nodes.push(b); else b.values.forEach(v => { if (!n.values.some(x => x.id === v.id)) n.values.push(v); if (b.info) n.info = true; }); });
   return saved.nodes;
@@ -219,8 +211,15 @@ function drawEdges() {
     if (!dot || !tgt) return;
     const a = dot.getBoundingClientRect(), b = tgt.getBoundingClientRect();
     const x1 = a.left + a.width / 2 - sr.left, y1 = a.top + a.height / 2 - sr.top, x2 = b.left - sr.left - 2, y2 = b.top + b.height / 2 - sr.top;
-    const back = x2 < x1 + 20, dx = back ? 110 : Math.max(60, (x2 - x1) / 2);
-    const d = "M" + x1 + "," + y1 + " C" + (x1 + dx) + "," + y1 + " " + (x2 - dx) + "," + y2 + " " + x2 + "," + y2;
+    const nb = tgt.closest(".node").getBoundingClientRect(), top = nb.top - sr.top;
+    let d;
+    if (top > y1 + 30 && Math.abs(nb.left - a.left) < 320) {
+      const xt = Math.min(Math.max(x1, nb.left - sr.left + 25), nb.right - sr.left - 25);
+      d = "M" + x1 + "," + y1 + " C" + (x1 + 50) + "," + y1 + " " + xt + "," + (top - 90) + " " + xt + "," + (top - 2);
+    } else {
+      const back = x2 < x1 + 20, dx = back ? 110 : Math.max(60, (x2 - x1) / 2);
+      d = "M" + x1 + "," + y1 + " C" + (x1 + dx) + "," + y1 + " " + (x2 - dx) + "," + y2 + " " + x2 + "," + y2;
+    }
     const hl = sel && sel.type === "val" && sel.vid === v.id;
     paths += '<path d="' + d + '" fill="none" stroke-width="' + (hl ? 3.5 : 2) + '" style="stroke:' + toneVar(v.tone) + '" opacity="' + (sel && sel.type === "val" && !hl ? .55 : 1) + '" marker-end="url(#ar' + v.tone + ')"/>';
   }));
@@ -287,14 +286,14 @@ function drawPanel() {
 }
 
 /* ---------- кнопки сверху */
-function setView(v) { view = v; sel = null; $("tMain").setAttribute("aria-selected", String(v === "main")); $("tAdm").setAttribute("aria-selected", String(v === "adm")); $("wrap").scrollTo(0, 0); render(); }
-$("tMain").addEventListener("click", () => setView("main")); $("tAdm").addEventListener("click", () => setView("adm"));
+function setView(v) { view = v; sel = null; $("tMain").setAttribute("aria-selected", String(v === "main"));  $("wrap").scrollTo(0, 0); render(); }
+$("tMain").addEventListener("click", () => setView("main"));
 $("addNode").addEventListener("click", () => {
   const w = $("wrap"), n = { id: uid("n"), g: view, x: Math.round(w.scrollLeft + 40), y: Math.round(w.scrollTop + 40), title: "Новый блок", who: "Менеджер", note: "", values: [{ id: uid("v"), text: "Готово", to: null, tone: "ok" }] };
   S.nodes.push(n); sel = { type: "node", id: n.id }; queueSave(); render();
 });
 function schemaText() {
-  return [["main", "ВЕСЬ ПУТЬ ЗАКАЗА"], ["adm", "ДОПУСК: ЧТО КУДА ВЕДЁТ"]].map(([g, t]) => "=== " + t + " ===\n\n" + S.nodes.filter(n => (n.g || "main") === g).sort((a, b) => a.x - b.x || a.y - b.y).map(n => {
+  return [["main", "ВЕСЬ ПУТЬ ЗАКАЗА"]].map(([g, t]) => "=== " + t + " ===\n\n" + S.nodes.filter(n => (n.g || "main") === g).sort((a, b) => a.x - b.x || a.y - b.y).map(n => {
     const head = "[" + n.who + "] " + n.title + (n.note ? " (" + n.note + ")" : "");
     const rows = n.values.map(v => "   • " + v.text + " → " + (v.to ? byId(v.to).title : "заказ остаётся здесь") + (v.tone === "bad" ? "  [проблема]" : v.tone === "warn" ? "  [внимание]" : ""));
     return [head, ...rows].join("\n");
