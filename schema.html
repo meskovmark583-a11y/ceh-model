@@ -77,6 +77,7 @@ header .sp{flex:1}
   <h1>Схема цеха</h1>
   <div role="tablist" aria-label="Вид схемы" style="display:flex;gap:6px">
     <button class="btn" role="tab" id="tMain" type="button" aria-selected="true">Весь путь заказа</button>
+    <button class="btn" role="tab" id="tAdm" type="button" aria-selected="false">Допуск: что куда ведёт</button>
   </div>
   <button class="btn pri" id="addNode" type="button">+ Блок</button>
   <button class="btn" id="asText" type="button">Показать текстом</button>
@@ -104,7 +105,7 @@ function seed() {
       { id: "in", x: 30, y: 200, title: "Заказ из 1С", who: "1С", note: "Заказ покупателя с бумажного листа", values: [V("v1", "Заказ загружен", "mgr")] },
       { id: "mgr", x: 320, y: 40, title: "Проверка заказа", who: "Менеджер", note: "Колонка B «Для менеджера: ОК / Перенос»", values: [V("v2", "ОК", "adm", "ok"), V("v3", "Перенос", "date", "warn")] },
       { id: "date", x: 610, y: 330, title: "Новая дата отгрузки", who: "Менеджер", note: "Выбор даты в календаре; в таблице красный ПЕРЕНОС и жёлтая дата", values: [V("v4", "Дата выбрана", "adm", "ok")] },
-      { id: "adm", x: 900, y: 40, title: "Допуск", who: "Менеджер", note: "Колонка A «Задача». Один выключатель: есть допуск или нет. Проблемы цеха смотри в блоках операций: они возвращают заказ менеджеру", values: [V("v5", "Допуск есть", "lab", "ok"), V("v8", "Нет допуска", "wait", "bad")] },
+      { id: "adm", x: 900, y: 40, title: "Допуск", who: "Менеджер", note: "Колонка A «Задача». Один выключатель: есть допуск или нет. Что значит каждый вариант, смотри вкладку «Допуск»", values: [V("v5", "Допуск есть", "lab", "ok"), V("v8", "Нет допуска", "wait", "bad")] },
       { id: "wait", x: 1190, y: 560, title: "Остановка: нет допуска", who: "Менеджер", note: "Ответвление от колонки A. Цех такой заказ не собирает (обычно не оплачен), пока менеджер не даст допуск", values: [V("v9", "Допуск дали", "lab", "ok")] },
       { id: "lab", x: 1190, y: 40, title: "Расклейка", who: "Расклейщица", note: "Колонка I «Статус расклейки». Мешки в крафте не клеим", values: [V("v10", "Не готово"), V("v11", "Готово, пачек расклеено", "pack", "ok"), V("v12", "Нет наклеек", "prob", "bad"), V("v27", "Частично расклеено", "prob", "warn"), V("v28", "Ошибка в заказе (вес, позиция)", "prob", "bad"), V("v29", "Нет зерна", "grain", "warn")] },
       { id: "prob", x: 1700, y: 560, title: "Проблема у менеджера", who: "Менеджер", note: "Любая проблема на любой операции возвращает заказ сюда. Заказ у цеха пропадает, пока менеджер и директор не решат", values: [V("v13", "Решили: вернуть в работу", "pack", "ok"), V("v14", "Перенос на другую дату", "date", "warn"), V("v34", "Допуск снят", "wait", "bad")] },
@@ -115,12 +116,21 @@ function seed() {
       { id: "data", x: 30, y: 420, title: "Что есть в строке заказа", who: "1С", note: "Колонки C–H и L–O. Только справка, стрелок нет", info: true, values: [V("d1", "Дата создания"), V("d2", "Дата отгрузки"), V("d3", "Номер заказа (НФНЛ / 00УФ)"), V("d4", "Состав: 13 бр, 12 4гр…"), V("d5", "Заказ: клиент с пометками (э), ек"), V("d6", "ЧЗ: V с Честным знаком, O без"), V("d7", "Коробок и пачек"), V("d8", "База: Луна / Троица"), V("d9", "Способ доставки и адрес")] },
       { id: "eve", x: 1770, y: 960, title: "Остатки на вечер", who: "Фасовщик", note: "Низ таблицы: сорта и сколько осталось. Мешки × 20 кг, приблизительно", values: [V("e1", "Остаток записан", "sum", "ok")] },
       { id: "sum", x: 2060, y: 960, title: "Сводка директора", who: "Директор", note: "Видит остатки зерна, проблемы, «Ждём зерно»", values: [] },
+      { id: "a_adm", g: "adm", x: 30, y: 330, title: "Допуск", who: "Менеджер", note: "Колонка A «Задача». Менеджер меняет допуск в любой момент", values: [V("a1", "Грузим", "a_go", "ok"), V("a2", "Грузим без оплаты", "a_nopay", "ok"), V("a3", "Сборка без отгрузки", "a_noship", "warn"), V("a4", "Не грузим", "a_stop", "bad")] },
+      { id: "a_go", g: "adm", x: 380, y: 30, title: "Грузим", who: "Менеджер", note: "Всё разрешено, оплата есть", values: [V("a5", "Расклейщица клеит", "a_lab", "ok"), V("a6", "Фасовщик собирает", "a_pack", "ok"), V("a7", "Грузчик отгружает", "a_ship", "ok")] },
+      { id: "a_nopay", g: "adm", x: 380, y: 270, title: "Грузим без оплаты", who: "Менеджер", note: "Как «Грузим», но оплаты ещё нет. Менеджер и директор видят пометку", values: [V("a8", "Расклейщица клеит", "a_lab", "ok"), V("a9", "Фасовщик собирает", "a_pack", "ok"), V("a10", "Грузчик отгружает", "a_ship", "ok")] },
+      { id: "a_noship", g: "adm", x: 380, y: 510, title: "Сборка без отгрузки", who: "Менеджер", note: "Собираем заранее, но грузчику не отдаём", values: [V("a11", "Расклейщица клеит", "a_lab", "ok"), V("a12", "Фасовщик собирает", "a_pack", "ok"), V("a13", "Грузчик не отгружает", null, "bad")] },
+      { id: "a_stop", g: "adm", x: 380, y: 750, title: "Не грузим", who: "Менеджер", note: "Обычно не оплачен. Цех не собирает, даже если зерно есть", values: [V("a14", "Расклейщица: клеит или нет? (вопрос В9)", "a_lab", "warn"), V("a15", "Фасовщик не собирает", null, "bad"), V("a16", "Грузчик не отгружает", null, "bad")] },
+      { id: "a_lab", g: "adm", x: 770, y: 120, title: "Расклейка", who: "Расклейщица", note: "Заказ появляется у расклейщицы", values: [V("p1", "Нет наклеек", "a_mgr", "bad"), V("p2", "Частично расклеено", "a_mgr", "warn"), V("p3", "Ошибка в заказе (вес, позиция)", "a_mgr", "bad")] },
+      { id: "a_pack", g: "adm", x: 770, y: 420, title: "Сборка", who: "Фасовщик", note: "Заказ появляется у фасовщика", values: [V("p4", "Частично, не хватило", "a_mgr", "warn"), V("p5", "Не хватило пакетов", "a_mgr", "bad"), V("p6", "Вес не соответствует", "a_mgr", "bad")] },
+      { id: "a_ship", g: "adm", x: 770, y: 700, title: "Отгрузка", who: "Грузчик", note: "Заказ появляется у грузчика", values: [V("p7", "Не выполнена", "a_mgr", "bad"), V("p8", "Клиент не принял или не приехал", "a_mgr", "bad"), V("p9", "Не хватает коробок", "a_mgr", "bad")] },
+      { id: "a_mgr", g: "adm", x: 1160, y: 420, title: "Проблема у менеджера", who: "Менеджер", note: "Любая проблема на любой операции возвращает заказ сюда. Цех этот заказ не трогает, пока менеджер и директор не решат", values: [V("p10", "Решили: вернуть в работу", "a_lab", "ok"), V("p11", "Допуск снят", "a_stop", "bad")] },
       { id: "done", x: 2060, y: 40, title: "Готово", who: "Директор", note: "Заказ закрыт, виден в сводке директора", values: [] }
     ]
   };
 }
 
-const SEED_VER = 5;
+const SEED_VER = 6;
 let view = "main";
 let S = seed(), sel = null, mode = "pending", doc = null, saveT = null;
 const $ = id => document.getElementById(id);
@@ -286,14 +296,14 @@ function drawPanel() {
 }
 
 /* ---------- кнопки сверху */
-function setView(v) { view = v; sel = null; $("tMain").setAttribute("aria-selected", String(v === "main"));  $("wrap").scrollTo(0, 0); render(); }
-$("tMain").addEventListener("click", () => setView("main"));
+function setView(v) { view = v; sel = null; $("tMain").setAttribute("aria-selected", String(v === "main")); $("tAdm").setAttribute("aria-selected", String(v === "adm"));  $("wrap").scrollTo(0, 0); render(); }
+$("tMain").addEventListener("click", () => setView("main")); $("tAdm").addEventListener("click", () => setView("adm"));
 $("addNode").addEventListener("click", () => {
   const w = $("wrap"), n = { id: uid("n"), g: view, x: Math.round(w.scrollLeft + 40), y: Math.round(w.scrollTop + 40), title: "Новый блок", who: "Менеджер", note: "", values: [{ id: uid("v"), text: "Готово", to: null, tone: "ok" }] };
   S.nodes.push(n); sel = { type: "node", id: n.id }; queueSave(); render();
 });
 function schemaText() {
-  return [["main", "ВЕСЬ ПУТЬ ЗАКАЗА"]].map(([g, t]) => "=== " + t + " ===\n\n" + S.nodes.filter(n => (n.g || "main") === g).sort((a, b) => a.x - b.x || a.y - b.y).map(n => {
+  return [["main", "ВЕСЬ ПУТЬ ЗАКАЗА"], ["adm", "ДОПУСК: ЧТО КУДА ВЕДЁТ"]].map(([g, t]) => "=== " + t + " ===\n\n" + S.nodes.filter(n => (n.g || "main") === g).sort((a, b) => a.x - b.x || a.y - b.y).map(n => {
     const head = "[" + n.who + "] " + n.title + (n.note ? " (" + n.note + ")" : "");
     const rows = n.values.map(v => "   • " + v.text + " → " + (v.to ? byId(v.to).title : "заказ остаётся здесь") + (v.tone === "bad" ? "  [проблема]" : v.tone === "warn" ? "  [внимание]" : ""));
     return [head, ...rows].join("\n");
