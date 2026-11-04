@@ -122,7 +122,7 @@ function seed() {
       { id: "a_noship", g: "adm", x: 380, y: 510, title: "Сборка без отгрузки", who: "Менеджер", note: "Собираем заранее, но грузчику не отдаём", values: [V("a11", "Расклейщица клеит", "a_lab", "ok"), V("a12", "Фасовщик собирает", "a_pack", "ok"), V("a13", "Грузчик не отгружает", null, "bad")] },
       { id: "a_stop", g: "adm", x: 380, y: 750, title: "Не грузим", who: "Менеджер", note: "Обычно не оплачен. Цех не собирает, даже если зерно есть", values: [V("a14", "Расклейщица: клеит или нет? (вопрос В9)", "a_lab", "warn"), V("a15", "Фасовщик не собирает", null, "bad"), V("a16", "Грузчик не отгружает", null, "bad")] },
       { id: "a_lab", g: "adm", x: 770, y: 120, title: "Расклейка", who: "Расклейщица", note: "Заказ появляется у расклейщицы", values: [V("p1", "Нет наклеек", "a_mgr", "bad"), V("p2", "Частично расклеено", "a_mgr", "warn"), V("p3", "Ошибка в заказе (вес, позиция)", "a_mgr", "bad")] },
-      { id: "a_pack", g: "adm", x: 770, y: 420, title: "Сборка", who: "Фасовщик", note: "Заказ появляется у фасовщика", values: [V("p4", "Частично, не хватило", "a_mgr", "warn"), V("p5", "Не хватило пакетов", "a_mgr", "bad"), V("p6", "Вес не соответствует", "a_mgr", "bad")] },
+      { id: "a_pack", g: "adm", x: 770, y: 420, title: "Сборка", who: "Фасовщик", note: "Заказ появляется у фасовщика", values: [V("p4", "Частично, не хватило", "a_mgr", "warn"), V("p5", "Не хватило пакетов", "a_mgr", "bad"), V("p6", "Не хватило зерна", "a_mgr", "bad")] },
       { id: "a_ship", g: "adm", x: 770, y: 700, title: "Отгрузка", who: "Грузчик", note: "Заказ появляется у грузчика", values: [V("p7", "Не выполнена", "a_mgr", "bad"), V("p8", "Клиент не принял или не приехал", "a_mgr", "bad"), V("p9", "Не хватает коробок", "a_mgr", "bad")] },
       { id: "a_mgr", g: "adm", x: 1160, y: 420, title: "Проблема у менеджера", who: "Менеджер", note: "Любая проблема на любой операции возвращает заказ сюда. Цех этот заказ не трогает, пока менеджер и директор не решат", values: [V("p10", "Решили: вернуть в работу", "a_lab", "ok"), V("p11", "Допуск снят", "a_stop", "bad")] },
       { id: "done", x: 2060, y: 40, title: "Готово", who: "Директор", note: "Заказ закрыт, виден в сводке директора", values: [] }
@@ -130,7 +130,7 @@ function seed() {
   };
 }
 
-const SEED_VER = 6;
+const SEED_VER = 7;
 let view = "main";
 let S = seed(), sel = null, mode = "pending", doc = null, saveT = null;
 const $ = id => document.getElementById(id);
@@ -155,6 +155,7 @@ function el(tag, attrs, ...kids) {
 function migrate(saved) {
   const base = seed().nodes;
   if ((saved.ver || 1) >= SEED_VER) return saved.nodes;
+  if ((saved.ver || 1) < 7) { const pv = (saved.nodes.find(x => x.id === "a_pack") || { values: [] }).values.find(v => v.id === "p6"); if (pv) pv.text = "Не хватило зерна"; }
   if ((saved.ver || 1) < 5) { saved.nodes = saved.nodes.filter(x => x.g !== "adm"); ["wait", "grain", "part", "prob", "eve", "sum"].forEach(id => { const n = saved.nodes.find(x => x.id === id), b = base.find(x => x.id === id); if (n && b) { n.x = b.x; n.y = b.y; } }); ["lab", "pack", "ship", "prob"].forEach(id => { const n = saved.nodes.find(x => x.id === id), b = base.find(x => x.id === id); if (n && b) { n.values = b.values; n.note = b.note; } }); }
   if ((saved.ver || 1) < 4) { const a = saved.nodes.find(x => x.id === "adm"), b = base.find(x => x.id === "adm"); if (a && b) { a.values = b.values; a.note = b.note; } const w = saved.nodes.find(x => x.id === "wait"), bw = base.find(x => x.id === "wait"); if (w && bw) { w.title = bw.title; w.note = bw.note; } }
   base.forEach(b => { const n = saved.nodes.find(x => x.id === b.id); if (!n) saved.nodes.push(b); else b.values.forEach(v => { if (!n.values.some(x => x.id === v.id)) n.values.push(v); if (b.info) n.info = true; }); });
